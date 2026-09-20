@@ -1,8 +1,6 @@
 import cors from "cors";
 import express, { type Request, type Response } from "express";
 import helmet from "helmet";
-import { StatusCodes } from "http-status-codes";
-
 
 import { env } from "./core/config/env.js";
 import { errorMiddleware } from "./core/middlewares/error.middleware.js";
@@ -21,9 +19,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
 app.get("/", (_req: Request, res: Response) => {
-  res.status(StatusCodes.OK).json({
+  res.status(200).json({
     success: true,
-    message: "NeatNode TS REST API is running",
+    message: "Server is running",
     env: env.NODE_ENV,
   });
 });

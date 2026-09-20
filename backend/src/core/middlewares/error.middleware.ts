@@ -108,9 +108,6 @@ export const errorMiddleware = (
     isOperational = true;
   }
 
-  // ==========================================
-  // Zod Validation Error
-  // ==========================================
 
   else if (error instanceof ZodError) {
     statusCode = 400;
@@ -124,9 +121,7 @@ export const errorMiddleware = (
     isOperational = true;
   }
 
-  // ==========================================
-  // Prisma Known Request Error
-  // ==========================================
+
 
   else if (
     error instanceof Prisma.PrismaClientKnownRequestError
@@ -144,9 +139,6 @@ export const errorMiddleware = (
       error.code === "P2014";
   }
 
-  // ==========================================
-  // Prisma Validation Error
-  // ==========================================
 
   else if (
     error instanceof Prisma.PrismaClientValidationError
@@ -159,9 +151,6 @@ export const errorMiddleware = (
     isOperational = true;
   }
 
-  // ==========================================
-  // Prisma Initialization Error
-  // ==========================================
 
   else if (
     error instanceof Prisma.PrismaClientInitializationError
@@ -172,10 +161,6 @@ export const errorMiddleware = (
     isOperational = false;
   }
 
-  // ==========================================
-  // Prisma Rust Panic Error
-  // ==========================================
-
   else if (
     error instanceof Prisma.PrismaClientRustPanicError
   ) {
@@ -185,9 +170,6 @@ export const errorMiddleware = (
     isOperational = false;
   }
 
-  // ==========================================
-  // Unknown / Unhandled Error
-  // ==========================================
 
   else {
     statusCode = 500;
@@ -198,26 +180,18 @@ export const errorMiddleware = (
     isOperational = false;
   }
 
-  // ==========================================
-  // Response Status
-  // ==========================================
 
   const responseStatusCode = isOperational
     ? statusCode
     : 500;
 
-  // ==========================================
-  // Production Response Protection
-  // ==========================================
+
 
   const responseMessage =
     !isDev && !isOperational
       ? "Internal Server Error"
       : message;
 
-  // ==========================================
-  // Structured Logging
-  // ==========================================
 
   const logMeta = {
     statusCode: responseStatusCode,
@@ -246,9 +220,7 @@ export const errorMiddleware = (
     );
   }
 
-  // ==========================================
-  // Standardized Response
-  // ==========================================
+
 
   res.status(responseStatusCode).json({
     success: false,
