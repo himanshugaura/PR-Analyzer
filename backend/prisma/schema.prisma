@@ -1,0 +1,273 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id      String @id @default(cuid())
+  clerkId String @unique
+
+  githubId  BigInt? @unique
+  username  String
+  email     String?
+  avatarUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  installations GitHubInstallation[]
+  reviews       Review[]             @relation("TriggeredBy")
+}
+
+model GitHubInstallation {
+  id             String @id @default(cuid())
+  installationId BigInt @unique
+
+  accountId   BigInt
+  accountType GitHubAccountType
+
+  userId      String?
+  suspendedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  repositories Repository[]
+
+  @@index([accountId])
+  @@index([userId])
+}
+
+enum GitHubAccountType {
+  USER
+  ORGANIZATION
+}
+
+model Repository {
+  id       String @id @default(cuid())
+  githubId BigInt @unique
+
+  name       String
+  fullName   String
+  ownerLogin String
+
+  private       Boolean @default(false)
+  defaultBranch String?
+
+  installationId String
+  enabled        Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  installation GitHubInstallation @relation(fields: [installationId], references: [id], onDelete: Cascade)
+
+  pullRequests PullRequest[]
+  settings     RepositorySettings?
+
+  @@index([installationId])
+  @@index([ownerLogin])
+  @@index([enabled])
+}
+
+model RepositorySettings {
+  id           String @id @default(cuid())
+  repositoryId String @unique
+
+  enabled               Boolean  @default(true)
+  minimumSeverity       Severity @default(LOW)
+  aiReviewEnabled       Boolean  @default(true)
+  staticAnalysisEnabled Boolean  @default(true)
+  autoComment           Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+}
+
+model PullRequest {
+  id       String @id @default(cuid())
+  githubId BigInt @unique
+
+  number Int
+  title  String
+  body   String?
+
+  state PullRequestState
+
+  authorGithubId BigInt?
+  authorLogin    String?
+
+  baseBranch String
+  headBranch String
+
+  baseSha String
+  headSha String
+
+  repositoryId String
+
+  createdAt DateTime
+  updatedAt DateTime
+  closedAt  DateTime?
+  mergedAt  DateTime?
+
+  syncedAt DateTime @default(now())
+
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  reviews Review[]
+
+  @@unique([repositoryId, number])
+  @@index([repositoryId])
+  @@index([repositoryId, state])
+}
+
+enum PullRequestState {
+  OPEN
+  CLOSED
+  MERGED
+}
+
+model Review {
+  id String @id @default(cuid())
+
+  pullRequestId String
+  headSha       String
+
+  status ReviewStatus
+
+  triggeredById String?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  errorMessage String?
+
+  model         String?
+  promptVersion String?
+
+  totalFindings Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pullRequest PullRequest @relation(fields: [pullRequestId], references: [id], onDelete: Cascade)
+
+  triggeredBy User? @relation("TriggeredBy", fields: [triggeredById], references: [id], onDelete: SetNull)
+
+  findings Finding[]
+
+  @@unique([pullRequestId, headSha])
+  @@index([pullRequestId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum ReviewStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model Finding {
+  id String @id @default(cuid())
+
+  reviewId String
+
+  severity Severity
+  category FindingCategory
+
+  title      String
+  message    String
+  suggestion String?
+
+  filePath String
+
+  line      Int?
+  startLine Int?
+
+  side DiffSide @default(RIGHT)
+
+  githubCommentId BigInt?
+  commentStatus   CommentStatus @default(PENDING)
+
+  fingerprint String
+
+  confidence Float?
+  status     FindingStatus @default(OPEN)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, fingerprint])
+  @@index([reviewId])
+  @@index([severity])
+  @@index([status])
+  @@index([filePath])
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+enum FindingCategory {
+  BUG
+  SECURITY
+  PERFORMANCE
+  CODE_QUALITY
+  STYLE
+  MAINTAINABILITY
+  ERROR_HANDLING
+  TESTING
+  DATABASE
+  API
+  OTHER
+}
+
+enum FindingStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+enum CommentStatus {
+  PENDING
+  POSTED
+  FAILED
+}
+
+enum DiffSide {
+  LEFT
+  RIGHT
+}
+
+model WebhookEvent {
+  id String @id @default(cuid())
+
+  deliveryId String  @unique
+  event      String
+  action     String?
+
+  processed Boolean @default(false)
+
+  receivedAt   DateTime  @default(now())
+  processedAt  DateTime?
+  errorMessage String?
+
+  @@index([event])
+  @@index([receivedAt])
+}
