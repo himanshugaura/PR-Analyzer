@@ -1,19 +1,15 @@
-
 import type { NextFunction, Request, Response } from "express";
-
-import { Prisma } from "../../generated/prisma/client.js";
 import { ZodError } from "zod";
 
-import { env } from "../../core/config/env.js";
-import { logger } from "../../core/config/logger.js";
+import { env } from "../config/env.js";
+import { logger } from "../config/logger.js";
+import { Prisma } from "../../generated/prisma/client.js";
 import ApiError from "../../shared/utils/ApiError.js";
-
 
 type ErrorDetail = {
   path?: string;
   message: string;
 };
-
 
 const getPrismaErrorDetails = (
   error: Prisma.PrismaClientKnownRequestError,
@@ -23,10 +19,8 @@ const getPrismaErrorDetails = (
   errors: ErrorDetail[];
 } => {
   switch (error.code) {
-    // Unique constraint violation
     case "P2002": {
       const target = error.meta?.target;
-
       const fields = Array.isArray(target)
         ? target.map(String)
         : typeof target === "string"
@@ -43,7 +37,6 @@ const getPrismaErrorDetails = (
       };
     }
 
-    // Record not found
     case "P2025":
       return {
         statusCode: 404,
@@ -51,7 +44,6 @@ const getPrismaErrorDetails = (
         errors: [],
       };
 
-    // Foreign key constraint failure
     case "P2003":
       return {
         statusCode: 409,
@@ -59,7 +51,6 @@ const getPrismaErrorDetails = (
         errors: [],
       };
 
-    // Required relation violation
     case "P2014":
       return {
         statusCode: 409,
@@ -67,7 +58,6 @@ const getPrismaErrorDetails = (
         errors: [],
       };
 
-    // Default Prisma database error
     default:
       return {
         statusCode: 500,
@@ -77,150 +67,101 @@ const getPrismaErrorDetails = (
   }
 };
 
-
-
 export const errorMiddleware = (
   error: unknown,
   req: Request,
   res: Response,
   _next: NextFunction,
 ): void => {
-  const errorMessage =
-    error instanceof Error ? error.message : "Unknown error";
+  if (res.headersSent) {
+    _next(error);
+    return;
+  }
 
+  const errorMessage = error instanceof Error ? error.message : "Unknown error";
   const stack = error instanceof Error ? error.stack : undefined;
-
   const isDev = env.NODE_ENV === "development";
 
   let statusCode = 500;
   let message = isDev ? errorMessage : "Internal Server Error";
-
   let errors: ErrorDetail[] = [];
-
   let isOperational = false;
-
 
   if (error instanceof ApiError) {
     statusCode = error.statusCode;
     message = error.message;
     errors = error.errors as ErrorDetail[];
-
     isOperational = true;
-  }
-
-
-  else if (error instanceof ZodError) {
+  } else if (error instanceof ZodError) {
     statusCode = 400;
     message = "Validation failed";
-
     errors = error.issues.map((issue) => ({
       path: issue.path.join(".") || "root",
       message: issue.message,
     }));
-
     isOperational = true;
-  }
-
-
-
-  else if (
-    error instanceof Prisma.PrismaClientKnownRequestError
+  } else if (
+    error instanceof SyntaxError &&
+    "status" in error &&
+    (error as { status: unknown }).status === 400 &&
+    "body" in error
   ) {
+    statusCode = 400;
+    message = "Invalid JSON payload in request body.";
+    isOperational = true;
+  } else if (error instanceof Prisma.PrismaClientKnownRequestError) {
     const result = getPrismaErrorDetails(error);
-
     statusCode = result.statusCode;
     message = result.message;
     errors = result.errors;
-
     isOperational =
       error.code === "P2002" ||
       error.code === "P2025" ||
       error.code === "P2003" ||
       error.code === "P2014";
-  }
-
-
-  else if (
-    error instanceof Prisma.PrismaClientValidationError
-  ) {
+  } else if (error instanceof Prisma.PrismaClientValidationError) {
     statusCode = 400;
-    message = isDev
-      ? error.message
-      : "Invalid database operation.";
-
+    message = isDev ? error.message : "Invalid database operation.";
     isOperational = true;
-  }
-
-
-  else if (
-    error instanceof Prisma.PrismaClientInitializationError
-  ) {
+  } else if (error instanceof Prisma.PrismaClientInitializationError) {
     statusCode = 503;
     message = "Database service is temporarily unavailable.";
-
     isOperational = false;
-  }
-
-  else if (
-    error instanceof Prisma.PrismaClientRustPanicError
-  ) {
+  } else if (error instanceof Prisma.PrismaClientRustPanicError) {
     statusCode = 500;
     message = "Database service encountered an internal error.";
-
     isOperational = false;
-  }
-
-
-  else {
+  } else {
     statusCode = 500;
-    message = isDev
-      ? errorMessage
-      : "Internal Server Error";
-
+    message = isDev ? errorMessage : "Internal Server Error";
     isOperational = false;
   }
 
-
-  const responseStatusCode = isOperational
-    ? statusCode
-    : 500;
-
-
-
+  const responseStatusCode = statusCode;
   const responseMessage =
-    !isDev && !isOperational
+    !isDev && !isOperational && statusCode === 500
       ? "Internal Server Error"
       : message;
-
 
   const logMeta = {
     statusCode: responseStatusCode,
     method: req.method,
     route: req.originalUrl,
-    errorName:
-      error instanceof Error ? error.name : "UnknownError",
+    errorName: error instanceof Error ? error.name : "UnknownError",
   };
 
   if (isOperational) {
-    logger.warn(
-      `Operational error: ${message}`,
-      {
-        ...logMeta,
-        errors,
-      },
-    );
+    logger.warn(`Operational error: ${message}`, {
+      ...logMeta,
+      errors,
+    });
   } else {
-    logger.error(
-      `Unhandled error: ${errorMessage}`,
-      {
-        ...logMeta,
-        stack,
-        error,
-      },
-    );
+    logger.error(`Unhandled error: ${errorMessage}`, {
+      ...logMeta,
+      stack,
+      error,
+    });
   }
-
-
 
   res.status(responseStatusCode).json({
     success: false,

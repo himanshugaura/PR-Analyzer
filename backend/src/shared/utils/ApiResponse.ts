@@ -1,15 +1,20 @@
 import type { Response } from "express";
 
-const sendResponse = (
+const sendResponse = <T = unknown>(
   res: Response,
   statusCode: number,
   message: string,
-  data: Record<string, unknown> = {},
+  payload?: T,
 ): void => {
+  const isPlainObject =
+    payload !== null &&
+    typeof payload === "object" &&
+    !Array.isArray(payload);
+
   res.status(statusCode).json({
     success: statusCode < 400,
     message,
-    ...data,
+    ...(isPlainObject ? (payload as Record<string, unknown>) : payload !== undefined ? { data: payload } : {}),
   });
 };
 

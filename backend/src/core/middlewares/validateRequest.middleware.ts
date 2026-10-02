@@ -7,7 +7,11 @@ const validatePart = (part: "body" | "params" | "query", input: ZodTypeAny) => {
       const parsed = await input.parseAsync(req[part]);
 
       if (part === "query") {
-        Object.assign(req.query, parsed as Request["query"]);
+        Object.defineProperty(req, "query", {
+          value: parsed,
+          writable: true,
+          configurable: true,
+        });
       } else if (part === "params") {
         req.params = parsed as Request["params"];
       } else {
@@ -24,3 +28,31 @@ const validatePart = (part: "body" | "params" | "query", input: ZodTypeAny) => {
 export const validateBody = (input: ZodTypeAny) => validatePart("body", input);
 export const validateParams = (input: ZodTypeAny) => validatePart("params", input);
 export const validateQuery = (input: ZodTypeAny) => validatePart("query", input);
+
+export const validate = (schemas: {
+  body?: ZodTypeAny;
+  params?: ZodTypeAny;
+  query?: ZodTypeAny;
+}) => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (schemas.params) {
+        req.params = (await schemas.params.parseAsync(req.params)) as Request["params"];
+      }
+      if (schemas.query) {
+        const parsedQuery = await schemas.query.parseAsync(req.query);
+        Object.defineProperty(req, "query", {
+          value: parsedQuery,
+          writable: true,
+          configurable: true,
+        });
+      }
+      if (schemas.body) {
+        req.body = await schemas.body.parseAsync(req.body);
+      }
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+};

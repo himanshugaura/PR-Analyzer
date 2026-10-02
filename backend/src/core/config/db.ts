@@ -1,26 +1,31 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../../generated/prisma/client.js";
-
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL is not defined");
-}
+import { env } from "./env.js";
+import { logger } from "./logger.js";
 
 const adapter = new PrismaPg({
-  connectionString
+  connectionString: env.DATABASE_URL,
 });
 
 export const prisma = new PrismaClient({
-  adapter
+  adapter,
 });
 
 export const connectDB = async (): Promise<void> => {
   try {
     await prisma.$connect();
-    console.log("Connected to the database");
+    logger.info("Connected to the database successfully");
   } catch (error) {
-    console.error("Error connecting to the database:", error);
+    logger.error("Error connecting to the database", { error });
     process.exit(1);
+  }
+};
+
+export const disconnectDB = async (): Promise<void> => {
+  try {
+    await prisma.$disconnect();
+    logger.info("Disconnected from the database");
+  } catch (error) {
+    logger.error("Error disconnecting from the database", { error });
   }
 };
