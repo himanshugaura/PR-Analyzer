@@ -5,19 +5,11 @@ import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import ApiError from "../../shared/utils/ApiError.js";
-
-type ErrorDetail = {
-  path?: string;
-  message: string;
-};
+import type { ErrorDetail, PrismaErrorResult } from "../../shared/types/error.types.js";
 
 const getPrismaErrorDetails = (
   error: Prisma.PrismaClientKnownRequestError,
-): {
-  statusCode: number;
-  message: string;
-  errors: ErrorDetail[];
-} => {
+): PrismaErrorResult => {
   switch (error.code) {
     case "P2002": {
       const target = error.meta?.target;
