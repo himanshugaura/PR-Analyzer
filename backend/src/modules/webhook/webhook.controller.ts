@@ -18,3 +18,6 @@ export const handleClerkWebhook = async (
     eventType: event.type,
   });
 };
+
+export { handleGitHubWebhook } from "../installation/installation.controller.js";
+
