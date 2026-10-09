@@ -7,6 +7,11 @@ const adapter = new PrismaPg({
   connectionString: env.DATABASE_URL,
 });
 
+// Ensure BigInt values serialize cleanly to JSON as strings
+BigInt.prototype.toJSON = function (this: bigint) {
+  return this.toString();
+};
+
 export const prisma = new PrismaClient({
   adapter,
 });
