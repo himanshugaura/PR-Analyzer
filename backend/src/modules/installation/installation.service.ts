@@ -17,9 +17,6 @@ import type {
   UpdateRepositorySettingsDto,
 } from "../../shared/types/github.types.js";
 
-/**
- * Validates GitHub webhook HMAC SHA256 signature against the raw request body.
- */
 export const verifyGitHubSignature = (
   rawBody: string | undefined,
   signatureHeader: string | undefined,
@@ -51,9 +48,6 @@ export const verifyGitHubSignature = (
   }
 };
 
-/**
- * Verifies headers, signature, and extracts payload from incoming GitHub webhook request.
- */
 export const verifyAndExtractGitHubWebhook = (
   req: Request,
 ): { event: string; deliveryId: string; payload: Record<string, unknown> } => {
@@ -102,9 +96,6 @@ export const verifyAndExtractGitHubWebhook = (
   return { event, deliveryId, payload };
 };
 
-/**
- * Handles `installation` events (`created`, `deleted`, `suspend`, `unsuspend`).
- */
 export const handleInstallationEvent = async (
   payload: GitHubInstallationPayload,
 ): Promise<void> => {
@@ -119,7 +110,6 @@ export const handleInstallationEvent = async (
           ? GitHubAccountType.ORGANIZATION
           : GitHubAccountType.USER;
 
-      // Link to local user if matching githubId exists on account or sender
       const senderId = payload.sender?.id ? BigInt(payload.sender.id) : null;
       const user = await prisma.user.findFirst({
         where: {
@@ -151,7 +141,6 @@ export const handleInstallationEvent = async (
         },
       });
 
-      // Sync repositories included in creation payload
       if (payload.repositories && payload.repositories.length > 0) {
         for (const repo of payload.repositories) {
           const repoGithubId = BigInt(repo.id);
@@ -235,9 +224,6 @@ export const handleInstallationEvent = async (
   }
 };
 
-/**
- * Handles `installation_repositories` events (`added`, `removed`).
- */
 export const handleInstallationRepositoriesEvent = async (
   payload: GitHubInstallationRepositoriesPayload,
 ): Promise<void> => {
@@ -331,9 +317,7 @@ export const handleInstallationRepositoriesEvent = async (
   }
 };
 
-/**
- * Handles `pull_request` events (`opened`, `closed`, `reopened`, `synchronize`, `edited`, etc.).
- */
+
 export const handlePullRequestEvent = async (
   payload: GitHubPullRequestPayload,
 ): Promise<void> => {
@@ -453,9 +437,6 @@ export const handlePullRequestEvent = async (
   );
 };
 
-/**
- * Handles incoming GitHub webhook delivery idempotently using X-GitHub-Delivery.
- */
 export const processGitHubWebhook = async (
   req: Request,
 ): Promise<{
@@ -467,7 +448,6 @@ export const processGitHubWebhook = async (
   const { event, deliveryId, payload } = verifyAndExtractGitHubWebhook(req);
   const action = typeof payload.action === "string" ? payload.action : undefined;
 
-  // Check idempotency record
   const existingEvent = await prisma.webhookEvent.findUnique({
     where: { deliveryId },
   });
@@ -484,7 +464,6 @@ export const processGitHubWebhook = async (
     };
   }
 
-  // Record delivery attempt in WebhookEvent
   await prisma.webhookEvent.upsert({
     where: { deliveryId },
     create: {
@@ -524,7 +503,6 @@ export const processGitHubWebhook = async (
         break;
     }
 
-    // Mark delivery as successfully processed
     await prisma.webhookEvent.update({
       where: { deliveryId },
       data: {
@@ -557,9 +535,7 @@ export const processGitHubWebhook = async (
   }
 };
 
-/**
- * Fetches all GitHub installations linked to the specified user.
- */
+
 export const getUserInstallations = async (userId: string) => {
   return prisma.gitHubInstallation.findMany({
     where: { userId },
@@ -578,9 +554,7 @@ export const getUserInstallations = async (userId: string) => {
   });
 };
 
-/**
- * Fetches single GitHub installation details for the specified user.
- */
+
 export const getInstallationById = async (id: string, userId: string) => {
   const installation = await prisma.gitHubInstallation.findFirst({
     where: {
@@ -607,9 +581,6 @@ export const getInstallationById = async (id: string, userId: string) => {
   return installation;
 };
 
-/**
- * Links an unassociated or claimed GitHub installation to a user account.
- */
 export const linkInstallationToUser = async (installationId: bigint, userId: string) => {
   const existing = await prisma.gitHubInstallation.findUnique({
     where: { installationId },
@@ -635,9 +606,7 @@ export const linkInstallationToUser = async (installationId: bigint, userId: str
   });
 };
 
-/**
- * Updates settings or enabled status of a repository owned by the user.
- */
+
 export const updateRepositorySettings = async (
   repositoryId: string,
   userId: string,

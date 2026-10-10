@@ -33,7 +33,6 @@ const extractUserData = (data: ClerkUserData): ExtractedUserData => {
     }
   }
 
-  // Resolve avatar URL
   const avatarUrl = data.image_url || data.profile_image_url || null;
 
   return {
@@ -44,9 +43,6 @@ const extractUserData = (data: ClerkUserData): ExtractedUserData => {
   };
 };
 
-/**
- * Verifies Clerk webhook signature using Svix and CLERK_WEBHOOK_SECRET.
- */
 export const verifyClerkWebhook = (req: Request): ClerkWebhookEvent => {
   const secret = env.CLERK_WEBHOOK_SECRET;
   if (!secret) {
@@ -93,9 +89,7 @@ export const verifyClerkWebhook = (req: Request): ClerkWebhookEvent => {
   }
 };
 
-/**
- * Handles `user.created` event by upserting the local User record.
- */
+
 const handleUserCreated = async (data: ClerkUserData): Promise<void> => {
   const userData = extractUserData(data);
 
@@ -117,9 +111,6 @@ const handleUserCreated = async (data: ClerkUserData): Promise<void> => {
   logger.info(`User created/upserted from Clerk webhook with clerkId: ${userData.clerkId}`);
 };
 
-/**
- * Handles `user.updated` event by updating or upserting the local User record.
- */
 const handleUserUpdated = async (data: ClerkUserData): Promise<void> => {
   const userData = extractUserData(data);
 

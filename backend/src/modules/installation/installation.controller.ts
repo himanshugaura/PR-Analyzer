@@ -33,9 +33,7 @@ export const repositoryIdParamSchema = z.object({
   repositoryId: z.string().min(1, "Repository ID is required"),
 });
 
-/**
- * Controller to handle incoming GitHub App webhooks.
- */
+
 export const handleGitHubWebhook = async (
   req: Request,
   res: Response,
@@ -50,9 +48,6 @@ export const handleGitHubWebhook = async (
   });
 };
 
-/**
- * Lists all GitHub installations for the authenticated user.
- */
 export const listUserInstallations = async (
   req: Request,
   res: Response,
@@ -105,9 +100,7 @@ export const linkInstallation = async (
   sendResponse(res, 200, "Installation linked successfully", installation);
 };
 
-/**
- * Updates settings or toggles enabled state for a repository.
- */
+
 export const updateRepository = async (
   req: Request,
   res: Response,
