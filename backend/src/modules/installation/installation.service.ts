@@ -16,6 +16,10 @@ import type {
   GitHubPullRequestPayload,
   UpdateRepositorySettingsDto,
 } from "../../shared/types/github.types.js";
+import {
+  gitHubWebhookHeadersSchema,
+  type ListInstallationsQueryInput,
+} from "./installation.validation.js";
 
 export const verifyGitHubSignature = (
   rawBody: string | undefined,
@@ -57,21 +61,17 @@ export const verifyAndExtractGitHubWebhook = (
     throw new ApiError(500, "GITHUB_WEBHOOK_SECRET is not configured on the server");
   }
 
-  const signature = req.headers["x-hub-signature-256"] as string | undefined;
-  const event = req.headers["x-github-event"] as string | undefined;
-  const deliveryId = req.headers["x-github-delivery"] as string | undefined;
-
-  if (!signature) {
-    throw new ApiError(400, "Missing X-Hub-Signature-256 header");
+  const headersValidation = gitHubWebhookHeadersSchema.safeParse(req.headers);
+  if (!headersValidation.success) {
+    const errorMsg = headersValidation.error.issues.map((i) => i.message).join(", ");
+    throw new ApiError(400, `Invalid GitHub webhook headers: ${errorMsg}`);
   }
 
-  if (!event) {
-    throw new ApiError(400, "Missing X-GitHub-Event header");
-  }
-
-  if (!deliveryId) {
-    throw new ApiError(400, "Missing X-GitHub-Delivery header");
-  }
+  const {
+    "x-hub-signature-256": signature,
+    "x-github-event": event,
+    "x-github-delivery": deliveryId,
+  } = headersValidation.data;
 
   const rawBody = req.rawBody;
   if (!rawBody) {
@@ -536,9 +536,26 @@ export const processGitHubWebhook = async (
 };
 
 
-export const getUserInstallations = async (userId: string) => {
+export const getUserInstallations = async (
+  userId: string,
+  query?: ListInstallationsQueryInput,
+) => {
   return prisma.gitHubInstallation.findMany({
-    where: { userId },
+    where: {
+      userId,
+      ...(query?.search
+        ? {
+            repositories: {
+              some: {
+                name: {
+                  contains: query.search,
+                  mode: "insensitive",
+                },
+              },
+            },
+          }
+        : {}),
+    },
     include: {
       repositories: {
         include: {

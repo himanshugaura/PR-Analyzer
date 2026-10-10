@@ -11,6 +11,10 @@ import type {
   ClerkWebhookEvent,
   ExtractedUserData,
 } from "../../shared/types/webhook.types.js";
+import {
+  clerkWebhookEventSchema,
+  clerkWebhookHeadersSchema,
+} from "./webhook.validation.js";
 
 
 const extractUserData = (data: ClerkUserData): ExtractedUserData => {
@@ -50,13 +54,17 @@ export const verifyClerkWebhook = (req: Request): ClerkWebhookEvent => {
     throw new ApiError(500, "CLERK_WEBHOOK_SECRET is not configured on the server");
   }
 
-  const svixId = req.headers["svix-id"] as string | undefined;
-  const svixTimestamp = req.headers["svix-timestamp"] as string | undefined;
-  const svixSignature = req.headers["svix-signature"] as string | undefined;
-
-  if (!svixId || !svixTimestamp || !svixSignature) {
-    throw new ApiError(400, "Missing required Svix headers (svix-id, svix-timestamp, svix-signature)");
+  const headersValidation = clerkWebhookHeadersSchema.safeParse(req.headers);
+  if (!headersValidation.success) {
+    const errorMsg = headersValidation.error.issues.map((i) => i.message).join(", ");
+    throw new ApiError(400, `Invalid Svix headers: ${errorMsg}`);
   }
+
+  const {
+    "svix-id": svixId,
+    "svix-timestamp": svixTimestamp,
+    "svix-signature": svixSignature,
+  } = headersValidation.data;
 
   const payload = req.rawBody;
   if (!payload) {
@@ -80,13 +88,23 @@ export const verifyClerkWebhook = (req: Request): ClerkWebhookEvent => {
     throw new ApiError(400, "Invalid webhook signature");
   }
 
+  let parsedBody: unknown;
   try {
-    return (typeof req.body === "object" && req.body !== null
-      ? req.body
-      : JSON.parse(payload)) as ClerkWebhookEvent;
+    parsedBody =
+      typeof req.body === "object" && req.body !== null
+        ? req.body
+        : JSON.parse(payload);
   } catch {
     throw new ApiError(400, "Invalid JSON payload in webhook body");
   }
+
+  const eventValidation = clerkWebhookEventSchema.safeParse(parsedBody);
+  if (!eventValidation.success) {
+    const errorMsg = eventValidation.error.issues.map((i) => i.message).join(", ");
+    throw new ApiError(400, `Invalid Clerk webhook payload structure: ${errorMsg}`);
+  }
+
+  return eventValidation.data as unknown as ClerkWebhookEvent;
 };
 
 

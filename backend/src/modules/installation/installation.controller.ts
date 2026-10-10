@@ -1,37 +1,9 @@
 import type { Request, Response } from "express";
-import { z } from "zod";
 
 import * as installationService from "./installation.service.js";
+import type { ListInstallationsQueryInput } from "./installation.validation.js";
 import sendResponse from "../../shared/utils/ApiResponse.js";
 import ApiError from "../../shared/utils/ApiError.js";
-
-export const linkInstallationSchema = z.object({
-  installationId: z.union([z.number(), z.string()]).transform((val) => {
-    try {
-      return BigInt(val);
-    } catch {
-      throw new Error("Invalid installationId format");
-    }
-  }),
-});
-
-export const updateRepositorySettingsSchema = z.object({
-  enabled: z.boolean().optional(),
-  minimumSeverity: z
-    .enum(["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"])
-    .optional(),
-  aiReviewEnabled: z.boolean().optional(),
-  staticAnalysisEnabled: z.boolean().optional(),
-  autoComment: z.boolean().optional(),
-});
-
-export const installationIdParamSchema = z.object({
-  id: z.string().min(1, "Installation ID is required"),
-});
-
-export const repositoryIdParamSchema = z.object({
-  repositoryId: z.string().min(1, "Repository ID is required"),
-});
 
 
 export const handleGitHubWebhook = async (
@@ -56,14 +28,16 @@ export const listUserInstallations = async (
     throw new ApiError(401, "Authentication required");
   }
 
-  const installations = await installationService.getUserInstallations(req.user.id);
+  const query = req.query as unknown as ListInstallationsQueryInput;
+  const installations = await installationService.getUserInstallations(
+    req.user.id,
+    query,
+  );
 
   sendResponse(res, 200, "User installations retrieved successfully", installations);
 };
 
-/**
- * Gets a specific GitHub installation by ID for the authenticated user.
- */
+
 export const getInstallation = async (
   req: Request,
   res: Response,
@@ -81,9 +55,7 @@ export const getInstallation = async (
   sendResponse(res, 200, "Installation retrieved successfully", installation);
 };
 
-/**
- * Links an installation to the currently authenticated user.
- */
+
 export const linkInstallation = async (
   req: Request,
   res: Response,
