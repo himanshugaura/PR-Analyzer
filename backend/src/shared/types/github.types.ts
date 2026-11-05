@@ -115,3 +115,36 @@ export interface UpdateRepositorySettingsDto {
   staticAnalysisEnabled?: boolean;
   autoComment?: boolean;
 }
+
+export interface GitHubPullRequestFile {
+  sha: string | null;
+  filename: string;
+  status:
+    | "added"
+    | "removed"
+    | "modified"
+    | "renamed"
+    | "copied"
+    | "changed"
+    | "unchanged"
+    | string;
+  additions: number;
+  deletions: number;
+  changes: number;
+  blob_url: string;
+  raw_url: string;
+  contents_url: string;
+  patch?: string;
+  previous_filename?: string;
+}
+
+export interface PullRequestDiffData {
+  owner: string;
+  repo: string;
+  pullNumber: number;
+  baseSha: string;
+  headSha: string;
+  rawDiff: string;
+  files: GitHubPullRequestFile[];
+}
+
