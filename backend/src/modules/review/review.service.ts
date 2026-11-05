@@ -1,0 +1,429 @@
+import { prisma } from "../../core/config/db.js";
+import { env } from "../../core/config/env.js";
+import { getGeminiClient } from "../../core/config/gemini.js";
+import { logger } from "../../core/config/logger.js";
+import {
+  DiffSide,
+  FindingCategory,
+  FindingStatus,
+  ReviewStatus,
+  Severity,
+} from "../../generated/prisma/enums.js";
+import ApiError from "../../shared/utils/ApiError.js";
+import type {
+  AiFindingPayload,
+  AiReviewAnalysisResult,
+  FindingFilterOptions,
+  ReviewMetrics,
+  ReviewTriggerOptions,
+} from "../../shared/types/review.types.js";
+import { fetchPullRequestFiles } from "../pullRequest/pullRequest.service.js";
+import {
+  formatFilesForPrompt,
+  generateFindingFingerprint,
+} from "./diffParser.js";
+
+const SEVERITY_LEVELS: Record<Severity, number> = {
+  [Severity.CRITICAL]: 4,
+  [Severity.HIGH]: 3,
+  [Severity.MEDIUM]: 2,
+  [Severity.LOW]: 1,
+  [Severity.INFO]: 0,
+};
+
+const PROMPT_VERSION = "v1.0";
+
+/**
+ * Executes Gemini LLM content generation with structured JSON schema
+ * to evaluate code changes and extract actionable findings.
+ */
+export const analyzeDiffWithAI = async (
+  prTitle: string,
+  prBody: string | null,
+  formattedDiff: string,
+): Promise<AiReviewAnalysisResult> => {
+  const ai = getGeminiClient();
+
+  const systemInstruction = `You are an elite Staff Software Engineer and Senior Application Security Architect performing a Pull Request Code Review.
+Analyze the provided code diff carefully and identify genuine, actionable defects:
+- Critical and high-severity security vulnerabilities (injections, broken authentication, data leaks, SSRF, IDOR).
+- Functional bugs, off-by-one errors, race conditions, null-pointer dereferences, and logic flaws.
+- Performance regressions (N+1 queries, unindexed lookups, memory leaks, blocking CPU tasks).
+- Missing error handling, unhandled rejected promises, resource leaks.
+- Serious maintainability or architectural design flaws.
+
+Rules:
+1. ONLY flag real, high-confidence issues. Do NOT comment on formatting, whitespace, or stylistic nitpicks unless they cause a bug.
+2. Ensure line numbers map accurately to the new code indicated by 'Line <number> (+):' or 'Line <number> ( ):'.
+3. Set confidence between 0.0 and 1.0. Only include findings where confidence >= 0.70.
+4. Output valid JSON adhering to the expected schema.`;
+
+  const userPrompt = `Pull Request Title: ${prTitle}
+Pull Request Description: ${prBody || "None provided"}
+
+Changes & Annotated Diff:
+${formattedDiff}
+
+Provide your findings in JSON format with an optional summary and an array of findings.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: env.GEMINI_MODEL,
+      contents: [userPrompt],
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+      },
+    });
+
+    const responseText = response.text?.trim() || "{}";
+    const parsed = JSON.parse(responseText) as {
+      summary?: string;
+      findings?: Array<{
+        filePath: string;
+        line?: number | null;
+        startLine?: number | null;
+        side?: string;
+        severity?: string;
+        category?: string;
+        title: string;
+        message: string;
+        suggestion?: string | null;
+        confidence?: number;
+      }>;
+    };
+
+    const validCategories = new Set(Object.values(FindingCategory));
+    const validSeverities = new Set(Object.values(Severity));
+
+    const validatedFindings: AiFindingPayload[] = (parsed.findings || []).map((f) => {
+      const category = validCategories.has(f.category as FindingCategory)
+        ? (f.category as FindingCategory)
+        : FindingCategory.CODE_QUALITY;
+
+      const severity = validSeverities.has(f.severity as Severity)
+        ? (f.severity as Severity)
+        : Severity.MEDIUM;
+
+      const side =
+        f.side?.toUpperCase() === "LEFT" ? DiffSide.LEFT : DiffSide.RIGHT;
+
+      return {
+        filePath: f.filePath,
+        line: typeof f.line === "number" ? f.line : null,
+        startLine: typeof f.startLine === "number" ? f.startLine : null,
+        side,
+        severity,
+        category,
+        title: f.title?.slice(0, 200) || "Code Issue Detected",
+        message: f.message || "Potential defect detected in this change.",
+        suggestion: f.suggestion || null,
+        confidence: typeof f.confidence === "number" ? f.confidence : 0.8,
+      };
+    });
+
+    return {
+      summary: parsed.summary,
+      findings: validatedFindings,
+    };
+  } catch (error) {
+    logger.error("Gemini AI code review generation failed", { error });
+    throw new ApiError(502, `AI review generation failed: ${String(error)}`);
+  }
+};
+
+/**
+ * Triggers and persists a complete AI review pipeline for a pull request.
+ */
+export const runPullRequestReview = async ({
+  pullRequestId,
+  triggeredById = null,
+  forceReReview = false,
+}: ReviewTriggerOptions) => {
+  const pr = await prisma.pullRequest.findUnique({
+    where: { id: pullRequestId },
+    include: {
+      repository: {
+        include: {
+          installation: true,
+          settings: true,
+        },
+      },
+    },
+  });
+
+  if (!pr) {
+    throw new ApiError(404, "Pull request not found");
+  }
+
+  const settings = pr.repository.settings;
+  if (settings && (!settings.enabled || !settings.aiReviewEnabled)) {
+    logger.info(
+      `AI review skipped for PR #${pr.number} (${pr.repository.fullName}): AI review is disabled in repository settings`,
+    );
+    return null;
+  }
+
+  // Check if a review already exists for this exact headSha
+  const existingReview = await prisma.review.findUnique({
+    where: {
+      pullRequestId_headSha: {
+        pullRequestId,
+        headSha: pr.headSha,
+      },
+    },
+    include: {
+      findings: true,
+    },
+  });
+
+  if (existingReview) {
+    if (existingReview.status === ReviewStatus.COMPLETED && !forceReReview) {
+      logger.info(
+        `Review for PR #${pr.number} at SHA ${pr.headSha.slice(0, 7)} already completed. Returning cached review.`,
+      );
+      return existingReview;
+    }
+
+    if (existingReview.status === ReviewStatus.RUNNING) {
+      logger.info(
+        `Review for PR #${pr.number} at SHA ${pr.headSha.slice(0, 7)} is currently running.`,
+      );
+      return existingReview;
+    }
+  }
+
+  // Mark or create Review record as RUNNING
+  const review = await prisma.review.upsert({
+    where: {
+      pullRequestId_headSha: {
+        pullRequestId,
+        headSha: pr.headSha,
+      },
+    },
+    create: {
+      pullRequestId,
+      headSha: pr.headSha,
+      status: ReviewStatus.RUNNING,
+      triggeredById,
+      startedAt: new Date(),
+      model: env.GEMINI_MODEL,
+      promptVersion: PROMPT_VERSION,
+    },
+    update: {
+      status: ReviewStatus.RUNNING,
+      startedAt: new Date(),
+      completedAt: null,
+      errorMessage: null,
+      totalFindings: 0,
+      model: env.GEMINI_MODEL,
+      promptVersion: PROMPT_VERSION,
+      ...(triggeredById ? { triggeredById } : {}),
+    },
+  });
+
+  try {
+    // 1. Fetch changed files from GitHub
+    const files = await fetchPullRequestFiles(
+      pr.repository.installation.installationId,
+      pr.repository.ownerLogin,
+      pr.repository.name,
+      pr.number,
+    );
+
+    // 2. Format diff for prompt
+    const { formattedDiff, reviewedFileCount } = formatFilesForPrompt(files);
+
+    if (reviewedFileCount === 0 || !formattedDiff) {
+      logger.info(
+        `No reviewable code changes detected for PR #${pr.number} (${pr.repository.fullName})`,
+      );
+
+      return prisma.review.update({
+        where: { id: review.id },
+        data: {
+          status: ReviewStatus.COMPLETED,
+          completedAt: new Date(),
+          totalFindings: 0,
+        },
+        include: { findings: true },
+      });
+    }
+
+    // 3. Call AI Analysis
+    const analysis = await analyzeDiffWithAI(pr.title, pr.body, formattedDiff);
+
+    // 4. Filter findings by repository minimumSeverity threshold
+    const minSeverityThreshold = settings?.minimumSeverity
+      ? SEVERITY_LEVELS[settings.minimumSeverity]
+      : SEVERITY_LEVELS[Severity.LOW];
+
+    const eligibleFindings = analysis.findings.filter(
+      (finding) => SEVERITY_LEVELS[finding.severity] >= minSeverityThreshold,
+    );
+
+    // 5. Persist findings to database in a transaction
+    const completedReview = await prisma.$transaction(async (tx) => {
+      // Clear previous findings for this review if re-running
+      await tx.finding.deleteMany({
+        where: { reviewId: review.id },
+      });
+
+      // Insert new findings with deterministic fingerprints
+      if (eligibleFindings.length > 0) {
+        await tx.finding.createMany({
+          data: eligibleFindings.map((f) => ({
+            reviewId: review.id,
+            severity: f.severity,
+            category: f.category,
+            title: f.title,
+            message: f.message,
+            suggestion: f.suggestion,
+            filePath: f.filePath,
+            line: f.line,
+            startLine: f.startLine,
+            side: f.side ?? DiffSide.RIGHT,
+            fingerprint: generateFindingFingerprint(
+              f.filePath,
+              f.line,
+              f.category,
+              f.title,
+            ),
+            confidence: f.confidence,
+            status: FindingStatus.OPEN,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return tx.review.update({
+        where: { id: review.id },
+        data: {
+          status: ReviewStatus.COMPLETED,
+          completedAt: new Date(),
+          totalFindings: eligibleFindings.length,
+          errorMessage: null,
+        },
+        include: {
+          findings: {
+            orderBy: [{ severity: "asc" }, { createdAt: "desc" }],
+          },
+        },
+      });
+    });
+
+    logger.info(
+      `AI review completed for PR #${pr.number} (SHA ${pr.headSha.slice(0, 7)}): ${eligibleFindings.length} findings recorded`,
+    );
+
+    return completedReview;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error(`AI review pipeline failed for PR #${pr.number}:`, { error });
+
+    await prisma.review.update({
+      where: { id: review.id },
+      data: {
+        status: ReviewStatus.FAILED,
+        completedAt: new Date(),
+        errorMessage: errorMsg,
+      },
+    });
+
+    throw error;
+  }
+};
+
+/**
+ * Fetches a single review by ID with its findings and metrics,
+ * enforcing user tenancy check.
+ */
+export const getReviewById = async (
+  reviewId: string,
+  userId: string,
+  filter?: FindingFilterOptions,
+) => {
+  const review = await prisma.review.findFirst({
+    where: {
+      id: reviewId,
+      pullRequest: {
+        repository: {
+          installation: {
+            userId,
+          },
+        },
+      },
+    },
+    include: {
+      pullRequest: {
+        include: {
+          repository: true,
+        },
+      },
+      findings: {
+        where: {
+          ...(filter?.severity ? { severity: filter.severity } : {}),
+          ...(filter?.category ? { category: filter.category } : {}),
+          ...(filter?.status ? { status: filter.status } : {}),
+          ...(filter?.filePath
+            ? { filePath: { contains: filter.filePath, mode: "insensitive" } }
+            : {}),
+        },
+        orderBy: [{ severity: "asc" }, { line: "asc" }],
+      },
+    },
+  });
+
+  if (!review) {
+    throw new ApiError(404, "Review not found or not accessible by this user");
+  }
+
+  // Calculate metrics breakdown
+  const metrics: ReviewMetrics = {
+    totalFindings: review.findings.length,
+    criticalCount: review.findings.filter((f) => f.severity === Severity.CRITICAL).length,
+    highCount: review.findings.filter((f) => f.severity === Severity.HIGH).length,
+    mediumCount: review.findings.filter((f) => f.severity === Severity.MEDIUM).length,
+    lowCount: review.findings.filter((f) => f.severity === Severity.LOW).length,
+    infoCount: review.findings.filter((f) => f.severity === Severity.INFO).length,
+    status: review.status,
+  };
+
+  return {
+    review,
+    metrics,
+  };
+};
+
+/**
+ * Updates the resolution status of a finding (OPEN, RESOLVED, DISMISSED).
+ */
+export const updateFindingStatus = async (
+  findingId: string,
+  userId: string,
+  status: FindingStatus,
+) => {
+  const finding = await prisma.finding.findFirst({
+    where: {
+      id: findingId,
+      review: {
+        pullRequest: {
+          repository: {
+            installation: {
+              userId,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!finding) {
+    throw new ApiError(404, "Finding not found or not accessible by this user");
+  }
+
+  return prisma.finding.update({
+    where: { id: findingId },
+    data: { status },
+  });
+};
