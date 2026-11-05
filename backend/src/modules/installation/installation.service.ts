@@ -20,6 +20,7 @@ import {
   gitHubWebhookHeadersSchema,
   type ListInstallationsQueryInput,
 } from "./installation.validation.js";
+import { runPullRequestReview } from "../review/review.service.js";
 
 export const verifyGitHubSignature = (
   rawBody: string | undefined,
@@ -393,7 +394,7 @@ export const handlePullRequestEvent = async (
   const authorGithubId = pr.user?.id ? BigInt(pr.user.id) : null;
   const authorLogin = pr.user?.login ?? null;
 
-  await prisma.pullRequest.upsert({
+  const upsertedPr = await prisma.pullRequest.upsert({
     where: { githubId: prGithubId },
     create: {
       githubId: prGithubId,
@@ -435,6 +436,28 @@ export const handlePullRequestEvent = async (
   logger.info(
     `Pull request #${pr.number} synced for ${repo.full_name} [${state}] (SHA: ${pr.head.sha.slice(0, 7)})`,
   );
+
+  // Trigger automated AI code review pipeline when PR is active
+  if (
+    state === PullRequestState.OPEN &&
+    (payload.action === "opened" ||
+      payload.action === "synchronize" ||
+      payload.action === "reopened")
+  ) {
+    logger.info(
+      `Triggering automated AI review pipeline for PR #${pr.number} (${repo.full_name}) [action: ${payload.action}]`,
+    );
+
+    runPullRequestReview({
+      pullRequestId: upsertedPr.id,
+      forceReReview: payload.action === "synchronize",
+    }).catch((err) => {
+      logger.error(
+        `Automated AI review failed for PR #${pr.number} (${repo.full_name}):`,
+        { error: err },
+      );
+    });
+  }
 };
 
 export const processGitHubWebhook = async (

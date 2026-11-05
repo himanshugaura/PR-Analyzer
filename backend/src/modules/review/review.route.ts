@@ -8,6 +8,7 @@ import {
 } from "../../core/middlewares/validateRequest.middleware.js";
 import {
   getReview,
+  postReviewComments,
   triggerReview,
   updateFindingStatus,
 } from "./review.controller.js";
@@ -39,6 +40,13 @@ router.get(
   validateParams(reviewIdParamSchema),
   validateQuery(listFindingsQuerySchema),
   getReview,
+);
+
+// Manually post (or re-post) review comments to GitHub
+router.post(
+  "/:id/post-comments",
+  validateParams(reviewIdParamSchema),
+  postReviewComments,
 );
 
 // Update status of an individual finding (e.g. resolve or dismiss)

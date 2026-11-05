@@ -46,3 +46,11 @@ export interface ReviewMetrics {
   infoCount: number;
   status: ReviewStatus;
 }
+
+export interface PostReviewResult {
+  posted: boolean;
+  reviewCommentCount: number;
+  githubReviewId?: number;
+  skippedReason?: string;
+}
+

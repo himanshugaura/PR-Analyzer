@@ -85,3 +85,28 @@ export const updateFindingStatus = async (
 
   sendResponse(res, 200, "Finding status updated successfully", updatedFinding);
 };
+
+/**
+ * Controller to manually post review comments to GitHub PR.
+ */
+export const postReviewComments = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    throw new ApiError(401, "Authentication required");
+  }
+
+  const reviewId = req.params.id as string;
+  const result = await reviewService.postReviewToGitHub(reviewId);
+
+  sendResponse(
+    res,
+    200,
+    result.posted
+      ? "Review comments posted to GitHub successfully"
+      : `Review comment posting skipped: ${result.skippedReason}`,
+    result,
+  );
+};
+
