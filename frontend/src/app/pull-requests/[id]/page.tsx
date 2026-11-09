@@ -43,7 +43,12 @@ function PullRequestReviewContent({
   });
 
   // 3. Fetch PR Diff data
-  const { data: diffData, isLoading: isLoadingDiff } = usePullRequestDiff(prId);
+  const {
+    data: diffData,
+    isLoading: isLoadingDiff,
+    error: diffError,
+    refetch: refetchDiff,
+  } = usePullRequestDiff(prId);
 
   if (isLoadingPr) {
     return (
@@ -130,6 +135,17 @@ function PullRequestReviewContent({
           {isLoadingDiff ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+            </div>
+          ) : diffError ? (
+            <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-8 text-center text-xs text-red-400 space-y-3">
+              <p>Failed to load diff files from GitHub: {(diffError as Error)?.message || "Bad Gateway"}</p>
+              <button
+                type="button"
+                onClick={() => refetchDiff()}
+                className="px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-200 hover:bg-zinc-700 text-xs cursor-pointer font-medium"
+              >
+                Retry Loading Diff
+              </button>
             </div>
           ) : (
             <DiffViewer
