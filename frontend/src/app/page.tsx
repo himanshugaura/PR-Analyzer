@@ -123,7 +123,7 @@ export default function DashboardPage() {
           </div>
         ) : error ? (
           <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-6 text-center text-xs text-zinc-400">
-            Failed to load installations. Please check that your backend server is running on port 5000.
+            Failed to load installations. Please check that your backend server is running on port 8080.
           </div>
         ) : (
           <InstallationList installations={installations} />
