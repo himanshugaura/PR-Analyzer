@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Loader2, GitPullRequest, ArrowRight, ShieldCheck, ExternalLink } from "lucide-react";
+import { Search, Loader2, GitPullRequest, ArrowRight, ExternalLink } from "lucide-react";
 import { useAuth, SignInButton } from "@clerk/nextjs";
 import { Container } from "../components/layout/container";
 import { StatsOverview } from "../components/dashboard/stats-overview";
@@ -20,39 +20,37 @@ export default function DashboardPage() {
   const setSearchQuery = useUiStore((s) => s.setSearchQuery);
 
   const { data: installations = [], isLoading, error } = useInstallations(
-    searchQuery || undefined,
+    searchQuery || undefined
   );
 
-  // Loading state while Clerk initializes
   if (!isLoaded) {
     return (
       <Container className="flex min-h-[calc(100vh-10rem)] items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
+        <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
       </Container>
     );
   }
 
-  // Signed out state (if visited before middleware redirect or on public landing)
   if (!isSignedIn) {
     return (
       <Container className="flex min-h-[calc(100vh-10rem)] flex-col items-center justify-center text-center">
-        <div className="max-w-xl space-y-6">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 text-zinc-100 shadow-xl">
-            <GitPullRequest className="h-7 w-7" />
+        <div className="max-w-md space-y-8">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-400">
+            <GitPullRequest className="h-8 w-8" />
           </div>
 
-          <div className="space-y-2">
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-100">
-              PR Analyzer
+          <div className="space-y-3">
+            <h1 className="text-4xl font-bold tracking-tight text-zinc-100 font-mono">
+              PR ANALYZER
             </h1>
-            <p className="text-sm text-zinc-400 max-w-md mx-auto">
-              Automated AI pull request code reviews, bug detection, and security analysis powered by Google Gemini.
+            <p className="text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
+              Automated AI code reviews, bug detection, and security analysis for your pull requests.
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <SignInButton mode="modal">
-              <Button size="lg" className="gap-2 w-full sm:w-auto font-medium">
+              <Button size="lg" className="gap-2 w-full sm:w-auto">
                 <span>Sign In to Continue</span>
                 <ArrowRight className="h-4 w-4" />
               </Button>
@@ -70,11 +68,6 @@ export default function DashboardPage() {
               </Button>
             </a>
           </div>
-
-          <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/60 px-3 py-1 text-xs text-zinc-400">
-            <ShieldCheck className="h-3.5 w-3.5 text-zinc-200" />
-            <span>Automated inline comments & webhook evaluation</span>
-          </div>
         </div>
       </Container>
     );
@@ -83,24 +76,23 @@ export default function DashboardPage() {
   return (
     <Container>
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+          <h1 className="text-xl font-bold tracking-tight text-zinc-100 font-mono uppercase">
             Overview
           </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Monitored GitHub App installations, repositories, and automated reviews.
+          <p className="text-xs text-zinc-600 mt-1">
+            Connected repositories and automated review activity
           </p>
         </div>
 
-        {/* Repository Search Filter */}
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-500" />
+        <div className="relative w-full sm:w-60">
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-600" />
           <Input
             placeholder="Search repositories..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 text-xs h-9 bg-zinc-900/50 border-zinc-800"
+            className="pl-8 h-9"
           />
         </div>
       </div>
@@ -108,22 +100,22 @@ export default function DashboardPage() {
       {/* Stats Overview */}
       <StatsOverview installations={installations} />
 
-      {/* Installations and Repositories List */}
+      {/* Repositories */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-semibold tracking-tight text-zinc-100">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-sm font-semibold tracking-widest text-zinc-400 uppercase font-mono">
             Connected Repositories
           </h2>
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Loader2 className="h-6 w-6 animate-spin text-zinc-500 mb-2" />
-            <p className="text-xs text-zinc-400 font-mono">Loading installations...</p>
+          <div className="flex flex-col items-center justify-center py-20">
+            <Loader2 className="h-5 w-5 animate-spin text-amber-500 mb-3" />
+            <p className="text-xs text-zinc-600 font-mono">Loading...</p>
           </div>
         ) : error ? (
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-6 text-center text-xs text-zinc-400">
-            Failed to load installations. Please check that your backend server is running on port 8080.
+          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-8 text-center text-xs text-zinc-500">
+            Failed to load installations.
           </div>
         ) : (
           <InstallationList installations={installations} />

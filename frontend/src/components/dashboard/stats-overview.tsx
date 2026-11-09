@@ -1,84 +1,46 @@
-import { GitPullRequest, GitFork, Shield, Box } from "lucide-react";
-import { Card, CardContent } from "../ui/card";
+import { GitPullRequest, GitFork, Shield, Boxes } from "lucide-react";
 import type { GitHubInstallation } from "../../types";
 
-export function StatsOverview({
-  installations = [],
-}: {
-  installations: GitHubInstallation[];
-}) {
+export function StatsOverview({ installations = [] }: { installations: GitHubInstallation[] }) {
   const totalInstallations = installations.length;
-  const totalRepositories = installations.reduce(
-    (acc, inst) => acc + (inst.repositories?.length || 0),
-    0,
-  );
+  const totalRepositories = installations.reduce((acc, inst) => acc + (inst.repositories?.length || 0), 0);
   const activeAiRepos = installations.reduce(
-    (acc, inst) =>
-      acc +
-      (inst.repositories?.filter((r) => r.settings?.aiReviewEnabled && r.enabled)
-        .length || 0),
-    0,
+    (acc, inst) => acc + (inst.repositories?.filter((r) => r.settings?.aiReviewEnabled && r.enabled).length || 0),
+    0
   );
   const totalPrs = installations.reduce(
-    (acc, inst) =>
-      acc +
-      (inst.repositories?.reduce(
-        (repoAcc, r) => repoAcc + (r._count?.pullRequests || 0),
-        0,
-      ) || 0),
-    0,
+    (acc, inst) => acc + (inst.repositories?.reduce((repoAcc, r) => repoAcc + (r._count?.pullRequests || 0), 0) || 0),
+    0
   );
 
   const stats = [
-    {
-      title: "GitHub Installations",
-      value: totalInstallations,
-      icon: Box,
-      description: "Connected GitHub accounts",
-    },
-    {
-      title: "Repositories",
-      value: totalRepositories,
-      icon: GitFork,
-      description: "Monitored codebases",
-    },
-    {
-      title: "AI Review Active",
-      value: activeAiRepos,
-      icon: Shield,
-      description: "Automated analysis enabled",
-    },
-    {
-      title: "Pull Requests",
-      value: totalPrs,
-      icon: GitPullRequest,
-      description: "PRs synced and evaluated",
-    },
+    { title: "Installations", value: totalInstallations, icon: Boxes },
+    { title: "Repositories", value: totalRepositories, icon: GitFork },
+    { title: "AI Review Active", value: activeAiRepos, icon: Shield },
+    { title: "Pull Requests", value: totalPrs, icon: GitPullRequest },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 mb-8">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 mb-8">
       {stats.map((item) => {
         const Icon = item.icon;
         return (
-          <Card key={item.title} className="bg-zinc-50/50 dark:bg-zinc-900/40">
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
-                  {item.title}
-                </span>
-                <Icon className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
+          <div
+            key={item.title}
+            className="rounded-xl border border-white/8 bg-white/[0.03] backdrop-blur-sm p-4"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
+                {item.title}
+              </span>
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-amber-500/10 text-amber-500">
+                <Icon className="h-3.5 w-3.5" />
               </div>
-              <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50 font-mono">
-                  {item.value}
-                </span>
-              </div>
-              <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
-                {item.description}
-              </p>
-            </CardContent>
-          </Card>
+            </div>
+            <span className="text-3xl font-bold font-mono text-zinc-100">
+              {item.value}
+            </span>
+          </div>
         );
       })}
     </div>

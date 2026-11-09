@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #f4f4f5;
 }
 
 @theme inline {
@@ -12,74 +12,54 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
-/* Clerk Authentication Dark Theme High-Contrast Overrides */
+/* Subtle grid background texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Clerk Dark Theme */
 .cl-card {
-  background-color: #09090b !important;
+  background-color: rgba(10, 10, 10, 0.95) !important;
+  backdrop-filter: blur(16px) !important;
   color: #f4f4f5 !important;
-  border: 1px solid #27272a !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
 }
-
-.cl-headerTitle {
-  color: #fafafa !important;
-}
-
+.cl-headerTitle { color: #fafafa !important; }
 .cl-headerSubtitle,
 .cl-dividerText,
-.cl-footerActionText {
-  color: #a1a1aa !important;
-}
-
-.cl-footerActionLink {
-  color: #e4e4e7 !important;
-}
-
-.cl-footerActionLink:hover {
-  color: #ffffff !important;
-}
-
+.cl-footerActionText { color: #71717a !important; }
+.cl-footerActionLink { color: #d4d4d8 !important; }
+.cl-footerActionLink:hover { color: #ffffff !important; }
 .cl-socialButtonsBlockButton {
-  background-color: #18181b !important;
-  border: 1px solid #27272a !important;
+  background-color: rgba(255,255,255,0.05) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
   color: #fafafa !important;
 }
-
-.cl-socialButtonsBlockButton:hover {
-  background-color: #27272a !important;
-}
-
-.cl-socialButtonsBlockButtonText {
-  color: #fafafa !important;
-  font-weight: 500 !important;
-}
-
-.cl-formFieldLabel {
-  color: #d4d4d8 !important;
-}
-
+.cl-socialButtonsBlockButton:hover { background-color: rgba(255,255,255,0.1) !important; }
+.cl-socialButtonsBlockButtonText { color: #fafafa !important; font-weight: 500 !important; }
+.cl-formFieldLabel { color: #d4d4d8 !important; }
 .cl-formFieldInput {
-  background-color: #18181b !important;
+  background-color: rgba(255,255,255,0.05) !important;
   color: #f4f4f5 !important;
-  border: 1px solid #27272a !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
 }
-
 .cl-formButtonPrimary {
-  background-color: #f4f4f5 !important;
-  color: #09090b !important;
+  background-color: #f59e0b !important;
+  color: #000 !important;
+  font-weight: 600 !important;
 }
-
-.cl-formButtonPrimary:hover {
-  background-color: #e4e4e7 !important;
-}
+.cl-formButtonPrimary:hover { background-color: #d97706 !important; }

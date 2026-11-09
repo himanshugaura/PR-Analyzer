@@ -43,7 +43,7 @@ export function TabsList({
   return (
     <div
       className={cn(
-        "inline-flex h-9 items-center justify-center rounded-lg bg-zinc-100 p-1 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800",
+        "inline-flex h-9 items-center justify-center rounded-lg bg-white/5 p-1 text-zinc-500 border border-white/10",
         className,
       )}
     >
@@ -69,10 +69,10 @@ export function TabsTrigger({
       type="button"
       onClick={() => onValueChange(value)}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-xs font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 cursor-pointer select-none",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-xs font-medium transition-all focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer select-none",
         isActive
-          ? "bg-white text-zinc-950 shadow-xs dark:bg-zinc-950 dark:text-zinc-50 font-semibold"
-          : "hover:text-zinc-900 dark:hover:text-zinc-100 text-zinc-400",
+          ? "bg-amber-500 text-black font-semibold shadow-sm"
+          : "hover:text-zinc-200 text-zinc-500",
         className,
       )}
     >
@@ -93,7 +93,7 @@ export function TabsContent({
   const { value: activeValue } = useTabsContext();
   if (activeValue !== value) return null;
   return (
-    <div className={cn("mt-4 ring-offset-background focus-visible:outline-none", className)}>
+    <div className={cn("mt-4 focus-visible:outline-none", className)}>
       {children}
     </div>
   );

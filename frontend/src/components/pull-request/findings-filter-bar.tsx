@@ -25,10 +25,10 @@ export function FindingsFilterBar({
   const setStatus = useUiStore((s) => s.setStatusFilter);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-zinc-200 dark:border-zinc-800">
+    <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-white/5">
       {/* Severity filter pills */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-xs text-zinc-400 mr-1 font-medium">
+        <span className="text-xs text-zinc-600 mr-1 font-mono uppercase tracking-wider">
           Severity {totalCount !== undefined ? `(${totalCount}):` : ":"}
         </span>
         {SEVERITIES.map((sev) => {
@@ -42,8 +42,8 @@ export function FindingsFilterBar({
               onClick={() => setSeverity(sev === "ALL" ? undefined : sev)}
               className={`px-2.5 py-1 text-[11px] font-mono rounded-md border transition-all cursor-pointer ${
                 isSelected
-                  ? "bg-zinc-950 text-white border-zinc-950 dark:bg-zinc-100 dark:text-zinc-950 dark:border-zinc-100 font-semibold"
-                  : "bg-transparent text-zinc-500 border-zinc-200 hover:border-zinc-400 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-700"
+                  ? "bg-amber-500 text-black border-amber-500 font-semibold"
+                  : "bg-transparent text-zinc-500 border-white/10 hover:border-white/20 hover:text-zinc-300"
               }`}
             >
               {sev}
@@ -54,7 +54,7 @@ export function FindingsFilterBar({
 
       {/* Status filter pills */}
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-zinc-400 mr-1 font-medium">Status:</span>
+        <span className="text-xs text-zinc-600 mr-1 font-mono uppercase tracking-wider">Status:</span>
         {STATUSES.map((st) => {
           const isSelected =
             st === "ALL" ? !selectedStatus : selectedStatus === st;
@@ -66,8 +66,8 @@ export function FindingsFilterBar({
               onClick={() => setStatus(st === "ALL" ? undefined : st)}
               className={`px-2 py-0.5 text-[11px] font-mono rounded-md border transition-all cursor-pointer ${
                 isSelected
-                  ? "bg-zinc-950 text-white border-zinc-950 dark:bg-zinc-100 dark:text-zinc-950 dark:border-zinc-100 font-semibold"
-                  : "bg-transparent text-zinc-500 border-zinc-200 hover:border-zinc-400 dark:border-zinc-800 dark:text-zinc-400 dark:hover:border-zinc-700"
+                  ? "bg-amber-500 text-black border-amber-500 font-semibold"
+                  : "bg-transparent text-zinc-500 border-white/10 hover:border-white/20 hover:text-zinc-300"
               }`}
             >
               {st}

@@ -4,19 +4,19 @@ import { Loader2 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber-500/50 disabled:pointer-events-none disabled:opacity-40 select-none cursor-pointer",
   {
     variants: {
       variant: {
         default:
-          "bg-zinc-950 text-zinc-50 hover:bg-zinc-900 border border-zinc-900 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-200 dark:border-zinc-200 shadow-sm",
+          "bg-amber-500 text-black hover:bg-amber-400 border border-amber-500/50 shadow-sm font-semibold",
         outline:
-          "border border-zinc-300 bg-transparent text-zinc-900 hover:bg-zinc-100 dark:border-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-900",
+          "border border-white/15 bg-white/5 text-zinc-200 hover:bg-white/10 hover:border-white/25 backdrop-blur-sm",
         secondary:
-          "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800",
+          "bg-white/5 text-zinc-200 hover:bg-white/10 border border-white/10",
         ghost:
-          "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-zinc-100",
-        link: "text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-100",
+          "text-zinc-400 hover:bg-white/5 hover:text-zinc-200",
+        link: "text-amber-400 underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2",
@@ -25,11 +25,8 @@ const buttonVariants = cva(
         icon: "h-9 w-9",
       },
     },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
+    defaultVariants: { variant: "default", size: "default" },
+  }
 );
 
 export interface ButtonProps
@@ -47,11 +44,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || isLoading}
         {...props}
       >
-        {isLoading && <Loader2 className="h-4 w-4 animate-spin text-current" />}
+        {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
         {children}
       </button>
     );
-  },
+  }
 );
-
 Button.displayName = "Button";

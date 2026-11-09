@@ -54,8 +54,8 @@ function PullRequestReviewContent({
     return (
       <Container>
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <Loader2 className="h-6 w-6 animate-spin text-zinc-500 mb-2" />
-          <p className="text-xs text-zinc-400 font-mono">Loading pull request...</p>
+          <Loader2 className="h-6 w-6 animate-spin text-amber-500 mb-2" />
+          <p className="text-xs text-zinc-600 font-mono">Loading pull request...</p>
         </div>
       </Container>
     );
@@ -64,7 +64,7 @@ function PullRequestReviewContent({
   if (prError || !pullRequest) {
     return (
       <Container>
-        <div className="rounded-lg border border-zinc-800 p-8 text-center text-xs text-zinc-400">
+        <div className="rounded-lg border border-white/5 p-8 text-center text-xs text-zinc-500">
           Pull request not found or not accessible.
         </div>
       </Container>
@@ -96,7 +96,7 @@ function PullRequestReviewContent({
             </TabsTrigger>
             <TabsTrigger value="diff" className="gap-1.5">
               <FileText className="h-3.5 w-3.5" />
-              <span>Diff & Files ({diffData?.files?.length ?? 0})</span>
+              <span>Diff &amp; Files ({diffData?.files?.length ?? 0})</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -105,10 +105,10 @@ function PullRequestReviewContent({
         <TabsContent value="findings">
           {isLoadingReview ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+              <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
             </div>
           ) : !review ? (
-            <div className="rounded-xl border border-zinc-800 p-8 text-center text-xs text-zinc-400">
+            <div className="rounded-xl border border-white/5 p-8 text-center text-xs text-zinc-500">
               No review findings available. Trigger a review using the button above.
             </div>
           ) : (
@@ -116,7 +116,7 @@ function PullRequestReviewContent({
               <FindingsFilterBar totalCount={findings.length} />
 
               {findings.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-zinc-800 p-12 text-center text-xs text-zinc-400">
+                <div className="rounded-xl border border-dashed border-white/8 p-12 text-center text-xs text-zinc-600">
                   No findings matching the selected filters.
                 </div>
               ) : (
@@ -134,15 +134,15 @@ function PullRequestReviewContent({
         <TabsContent value="diff">
           {isLoadingDiff ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
+              <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
             </div>
           ) : diffError ? (
-            <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-8 text-center text-xs text-red-400 space-y-3">
+            <div className="rounded-xl border border-red-900/30 bg-red-950/10 p-8 text-center text-xs text-red-400 space-y-3">
               <p>Failed to load diff files from GitHub: {(diffError as Error)?.message || "Bad Gateway"}</p>
               <button
                 type="button"
                 onClick={() => refetchDiff()}
-                className="px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-200 hover:bg-zinc-700 text-xs cursor-pointer font-medium"
+                className="px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-zinc-200 hover:bg-white/10 text-xs cursor-pointer font-medium"
               >
                 Retry Loading Diff
               </button>
@@ -169,8 +169,8 @@ export default function PullRequestReviewPage({
       fallback={
         <Container>
           <div className="flex flex-col items-center justify-center py-24 text-center">
-            <Loader2 className="h-6 w-6 animate-spin text-zinc-500 mb-2" />
-            <p className="text-xs text-zinc-400 font-mono">Loading review...</p>
+            <Loader2 className="h-6 w-6 animate-spin text-amber-500 mb-2" />
+            <p className="text-xs text-zinc-600 font-mono">Loading review...</p>
           </div>
         </Container>
       }

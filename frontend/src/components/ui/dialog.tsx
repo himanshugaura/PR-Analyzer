@@ -33,18 +33,18 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/70 backdrop-blur-xs transition-opacity animate-in fade-in"
+        className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
         onClick={() => onOpenChange(false)}
       />
 
       {/* Content */}
-      <div className="relative z-50 w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-950 animate-in zoom-in-95">
+      <div className="relative z-50 w-full max-w-lg rounded-xl border border-white/10 bg-zinc-950 p-6 shadow-xl">
         <button
           type="button"
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none cursor-pointer"
+          className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none cursor-pointer"
         >
-          <X className="h-4 w-4 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100" />
+          <X className="h-4 w-4 text-zinc-500 hover:text-zinc-200" />
           <span className="sr-only">Close</span>
         </button>
         {children}
@@ -71,7 +71,7 @@ export function DialogTitle({
 }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h2
-      className={cn("text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100", className)}
+      className={cn("text-lg font-semibold tracking-tight text-zinc-100", className)}
       {...props}
     />
   );
@@ -83,7 +83,7 @@ export function DialogDescription({
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("text-sm text-zinc-500 dark:text-zinc-400", className)}
+      className={cn("text-sm text-zinc-500", className)}
       {...props}
     />
   );
@@ -95,7 +95,7 @@ export function DialogFooter({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("flex items-center justify-end space-x-2 mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-900", className)}
+      className={cn("flex items-center justify-end space-x-2 mt-6 pt-4 border-t border-white/5", className)}
       {...props}
     />
   );
