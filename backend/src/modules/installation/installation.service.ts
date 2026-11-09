@@ -4,6 +4,7 @@ import type { Request } from "express";
 import { env } from "../../core/config/env.js";
 import { logger } from "../../core/config/logger.js";
 import { prisma } from "../../core/config/db.js";
+import { createAppOctokit, createInstallationOctokit } from "../../core/config/octokit.js";
 import ApiError from "../../shared/utils/ApiError.js";
 import {
   GitHubAccountType,
@@ -559,10 +560,135 @@ export const processGitHubWebhook = async (
 };
 
 
+export const syncInstallationFromGitHub = async (
+  installationId: bigint,
+  userId?: string,
+) => {
+  try {
+    const appOctokit = createAppOctokit();
+    const { data: ghInstall } = await appOctokit.apps.getInstallation({
+      installation_id: Number(installationId),
+    });
+
+    const accountId = BigInt(ghInstall.account?.id || 0);
+    const accountType =
+      ghInstall.account &&
+      "type" in ghInstall.account &&
+      typeof ghInstall.account.type === "string" &&
+      ghInstall.account.type.toUpperCase() === "ORGANIZATION"
+        ? GitHubAccountType.ORGANIZATION
+        : GitHubAccountType.USER;
+
+    const dbInstallation = await prisma.gitHubInstallation.upsert({
+      where: { installationId },
+      create: {
+        installationId,
+        accountId,
+        accountType,
+        userId: userId ?? null,
+      },
+      update: {
+        ...(userId ? { userId } : {}),
+      },
+    });
+
+    // List and sync all accessible repositories
+    const instOctokit = createInstallationOctokit(installationId);
+    const { data: repoData } = await instOctokit.apps.listReposAccessibleToInstallation();
+
+    for (const repo of repoData.repositories) {
+      const repoGithubId = BigInt(repo.id);
+      const ownerLogin = repo.owner?.login || repo.full_name.split("/")[0];
+
+      await prisma.repository.upsert({
+        where: { githubId: repoGithubId },
+        create: {
+          githubId: repoGithubId,
+          name: repo.name,
+          fullName: repo.full_name,
+          ownerLogin,
+          private: repo.private ?? false,
+          defaultBranch: repo.default_branch ?? null,
+          installationId: dbInstallation.id,
+          enabled: true,
+          settings: {
+            create: {
+              enabled: true,
+              minimumSeverity: Severity.LOW,
+              aiReviewEnabled: true,
+              staticAnalysisEnabled: true,
+              autoComment: true,
+            },
+          },
+        },
+        update: {
+          name: repo.name,
+          fullName: repo.full_name,
+          ownerLogin,
+          private: repo.private ?? false,
+          installationId: dbInstallation.id,
+          ...(repo.default_branch ? { defaultBranch: repo.default_branch } : {}),
+        },
+      });
+    }
+
+    logger.info(
+      `Synchronized installation ${installationId.toString()} (${repoData.repositories.length} repos) directly from GitHub for user ${userId || "unknown"}`,
+    );
+
+    return dbInstallation;
+  } catch (err) {
+    logger.error(`Failed to sync installation ${installationId.toString()} from GitHub:`, err);
+    throw err;
+  }
+};
+
 export const getUserInstallations = async (
   userId: string,
   query?: ListInstallationsQueryInput,
 ) => {
+  // Check if user has installations
+  const count = await prisma.gitHubInstallation.count({
+    where: { userId },
+  });
+
+  // If user has 0 installations, attempt auto-discovery from GitHub!
+  if (count === 0) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (user?.githubId) {
+      // 1. Check if an installation already exists in DB with accountId matching user.githubId
+      const unclaimed = await prisma.gitHubInstallation.findFirst({
+        where: { accountId: user.githubId, userId: null },
+      });
+
+      if (unclaimed) {
+        await prisma.gitHubInstallation.update({
+          where: { id: unclaimed.id },
+          data: { userId },
+        });
+      }
+    }
+
+    // 2. Query GitHub directly for user's installation if not linked yet
+    if (user?.username) {
+      try {
+        const appOctokit = createAppOctokit();
+        const { data: ghInstall } = await appOctokit.apps.getUserInstallation({
+          username: user.username,
+        });
+
+        if (ghInstall?.id) {
+          await syncInstallationFromGitHub(BigInt(ghInstall.id), userId);
+        }
+      } catch (err) {
+        logger.debug(`No direct GitHub App installation found for username: ${user.username}`);
+      }
+    }
+  }
+
   return prisma.gitHubInstallation.findMany({
     where: {
       userId,
@@ -627,15 +753,17 @@ export const linkInstallationToUser = async (installationId: bigint, userId: str
   });
 
   if (!existing) {
-    throw new ApiError(
-      404,
-      "Installation not found in database. Ensure the GitHub App has been installed on GitHub.",
-    );
+    // Auto-sync directly from GitHub if webhook hasn't run yet!
+    await syncInstallationFromGitHub(installationId, userId);
+  } else {
+    await prisma.gitHubInstallation.update({
+      where: { installationId },
+      data: { userId },
+    });
   }
 
-  return prisma.gitHubInstallation.update({
+  return prisma.gitHubInstallation.findUnique({
     where: { installationId },
-    data: { userId },
     include: {
       repositories: {
         include: {

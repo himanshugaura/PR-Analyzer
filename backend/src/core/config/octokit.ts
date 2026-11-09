@@ -14,6 +14,16 @@ const formatPrivateKey = (key: string): string => {
   return key;
 };
 
+export const createAppOctokit = (): Octokit => {
+  return new Octokit({
+    authStrategy: createAppAuth,
+    auth: {
+      appId: env.GITHUB_APP_ID,
+      privateKey: formatPrivateKey(env.GITHUB_PRIVATE_KEY),
+    },
+  });
+};
+
 export const createInstallationOctokit = (
   installationId: number | bigint,
 ): Octokit => {
