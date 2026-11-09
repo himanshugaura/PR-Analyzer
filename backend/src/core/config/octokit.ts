@@ -8,10 +8,17 @@ import { env } from "./env.js";
  * commonly introduced when storing PEM certificates in single-line env files.
  */
 const formatPrivateKey = (key: string): string => {
-  if (key.includes("-----BEGIN") && !key.includes("\n") && key.includes("\\n")) {
-    return key.replace(/\\n/g, "\n");
+  let cleaned = key.trim();
+  if (
+    (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+    (cleaned.startsWith("'") && cleaned.endsWith("'"))
+  ) {
+    cleaned = cleaned.slice(1, -1);
   }
-  return key;
+  if (cleaned.includes("\\n")) {
+    cleaned = cleaned.replace(/\\n/g, "\n");
+  }
+  return cleaned;
 };
 
 export const createAppOctokit = (): Octokit => {
