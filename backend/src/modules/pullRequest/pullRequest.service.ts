@@ -1,6 +1,7 @@
 import { prisma } from "../../core/config/db.js";
 import { logger } from "../../core/config/logger.js";
 import { createInstallationOctokit } from "../../core/config/octokit.js";
+import { PullRequestState } from "../../generated/prisma/enums.js";
 import ApiError from "../../shared/utils/ApiError.js";
 import type {
   GitHubPullRequestFile,
@@ -173,30 +174,100 @@ export const listPullRequestsByRepository = async (
       : {}),
   };
 
-  const [total, pullRequests] = await Promise.all([
-    prisma.pullRequest.count({ where: whereClause }),
-    prisma.pullRequest.findMany({
-      where: whereClause,
-      include: {
-        _count: {
-          select: { reviews: true },
-        },
-        reviews: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-          select: {
-            id: true,
-            status: true,
-            totalFindings: true,
-            createdAt: true,
-          },
+  let total = await prisma.pullRequest.count({ where: whereClause });
+
+  // If no PRs exist in database yet and not searching, auto-import past PRs from GitHub!
+  if (total === 0 && !query?.search) {
+    try {
+      const repoWithInst = await prisma.repository.findUnique({
+        where: { id: repositoryId },
+        include: { installation: true },
+      });
+
+      if (repoWithInst?.installation) {
+        const octokit = createInstallationOctokit(repoWithInst.installation.installationId);
+        const { data: githubPRs } = await octokit.rest.pulls.list({
+          owner: repoWithInst.ownerLogin,
+          repo: repoWithInst.name,
+          state: "all",
+          per_page: 50,
+        });
+
+        for (const pr of githubPRs) {
+          let state: PullRequestState = PullRequestState.OPEN;
+          if (pr.merged_at) {
+            state = PullRequestState.MERGED;
+          } else if (pr.state === "closed") {
+            state = PullRequestState.CLOSED;
+          }
+
+          await prisma.pullRequest.upsert({
+            where: { githubId: BigInt(pr.id) },
+            create: {
+              githubId: BigInt(pr.id),
+              number: pr.number,
+              title: pr.title,
+              body: pr.body ?? null,
+              state,
+              authorGithubId: pr.user?.id ? BigInt(pr.user.id) : null,
+              authorLogin: pr.user?.login ?? null,
+              baseBranch: pr.base.ref,
+              headBranch: pr.head.ref,
+              baseSha: pr.base.sha,
+              headSha: pr.head.sha,
+              repositoryId: repoWithInst.id,
+              createdAt: new Date(pr.created_at),
+              updatedAt: new Date(pr.updated_at),
+              closedAt: pr.closed_at ? new Date(pr.closed_at) : null,
+              mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
+              syncedAt: new Date(),
+            },
+            update: {
+              number: pr.number,
+              title: pr.title,
+              body: pr.body ?? null,
+              state,
+              headSha: pr.head.sha,
+              baseSha: pr.base.sha,
+              updatedAt: new Date(pr.updated_at),
+              closedAt: pr.closed_at ? new Date(pr.closed_at) : null,
+              mergedAt: pr.merged_at ? new Date(pr.merged_at) : null,
+              syncedAt: new Date(),
+            },
+          });
+        }
+
+        if (githubPRs.length > 0) {
+          total = await prisma.pullRequest.count({ where: whereClause });
+          logger.info(`Auto-imported ${githubPRs.length} past PRs for repository ${repoWithInst.fullName}`);
+        }
+      }
+    } catch (err) {
+      logger.error("Failed to auto-sync existing PRs from GitHub:", err);
+    }
+  }
+
+  const pullRequests = await prisma.pullRequest.findMany({
+    where: whereClause,
+    include: {
+      _count: {
+        select: { reviews: true },
+      },
+      reviews: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: {
+          id: true,
+          status: true,
+          totalFindings: true,
+          createdAt: true,
         },
       },
-      orderBy: { updatedAt: "desc" },
-      skip,
-      take: limit,
-    }),
-  ]);
+    },
+    orderBy: { updatedAt: "desc" },
+    skip,
+    take: limit,
+  });
 
   return {
     pullRequests,
