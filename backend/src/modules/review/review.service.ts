@@ -67,7 +67,22 @@ Pull Request Description: ${prBody || "None provided"}
 Changes & Annotated Diff:
 ${formattedDiff}
 
-Provide your findings in JSON format with an optional summary and an array of findings.`;
+Provide your analysis in JSON format adhering strictly to this structure:
+{
+  "summary": "Executive summary of review findings",
+  "findings": [
+    {
+      "filePath": "file path from the diff",
+      "line": 10,
+      "severity": "CRITICAL" | "HIGH" | "MEDIUM" | "LOW" | "INFO",
+      "category": "SECURITY" | "BUG" | "PERFORMANCE" | "CODE_QUALITY" | "ERROR_HANDLING",
+      "title": "Brief descriptive title",
+      "message": "Clear explanation of the issue and security/correctness risk",
+      "suggestion": "Concrete suggested fix or code snippet",
+      "confidence": 0.95
+    }
+  ]
+}`;
 
   try {
     const response = await ai.models.generateContent({
@@ -80,53 +95,106 @@ Provide your findings in JSON format with an optional summary and an array of fi
     });
 
     const responseText = response.text?.trim() || "{}";
-    const parsed = JSON.parse(responseText) as {
-      summary?: string;
-      findings?: Array<{
-        filePath: string;
-        line?: number | null;
-        startLine?: number | null;
-        side?: string;
-        severity?: string;
-        category?: string;
-        title: string;
-        message: string;
-        suggestion?: string | null;
-        confidence?: number;
-      }>;
-    };
+    const rawParsed = JSON.parse(responseText);
+
+    let rawFindings: any[] = [];
+    let summary: string | undefined = undefined;
+
+    if (Array.isArray(rawParsed)) {
+      rawFindings = rawParsed;
+    } else if (rawParsed && typeof rawParsed === "object") {
+      summary = rawParsed.summary;
+      if (Array.isArray(rawParsed.findings)) {
+        rawFindings = rawParsed.findings;
+      } else if (Array.isArray(rawParsed.issues)) {
+        rawFindings = rawParsed.issues;
+      }
+    }
 
     const validCategories = new Set(Object.values(FindingCategory));
     const validSeverities = new Set(Object.values(Severity));
 
-    const validatedFindings: AiFindingPayload[] = (parsed.findings || []).map((f) => {
-      const category = validCategories.has(f.category as FindingCategory)
-        ? (f.category as FindingCategory)
-        : FindingCategory.CODE_QUALITY;
+    const validatedFindings: AiFindingPayload[] = [];
 
-      const severity = validSeverities.has(f.severity as Severity)
-        ? (f.severity as Severity)
-        : Severity.MEDIUM;
+    for (const f of rawFindings) {
+      const filePath = f.filePath || f.file || f.filename || f.path;
+      if (!filePath || typeof filePath !== "string") continue;
+
+      const rawSeverity = String(f.severity || "MEDIUM").toUpperCase();
+      let severity: Severity = Severity.MEDIUM;
+      if (validSeverities.has(rawSeverity as Severity)) {
+        severity = rawSeverity as Severity;
+      } else if (rawSeverity.includes("CRIT")) {
+        severity = Severity.CRITICAL;
+      } else if (rawSeverity.includes("HIGH")) {
+        severity = Severity.HIGH;
+      } else if (rawSeverity.includes("MED")) {
+        severity = Severity.MEDIUM;
+      } else if (rawSeverity.includes("LOW")) {
+        severity = Severity.LOW;
+      } else if (rawSeverity.includes("INFO")) {
+        severity = Severity.INFO;
+      }
+
+      const rawCategory = String(f.category || "CODE_QUALITY").toUpperCase();
+      let category: FindingCategory = FindingCategory.CODE_QUALITY;
+      if (validCategories.has(rawCategory as FindingCategory)) {
+        category = rawCategory as FindingCategory;
+      } else if (rawCategory.includes("SEC")) {
+        category = FindingCategory.SECURITY;
+      } else if (
+        rawCategory.includes("BUG") ||
+        rawCategory.includes("RUN") ||
+        rawCategory.includes("LOGIC")
+      ) {
+        category = FindingCategory.BUG;
+      } else if (rawCategory.includes("PERF")) {
+        category = FindingCategory.PERFORMANCE;
+      } else if (rawCategory.includes("ERR") || rawCategory.includes("EXCEPT")) {
+        category = FindingCategory.ERROR_HANDLING;
+      } else if (rawCategory.includes("STYLE") || rawCategory.includes("LINT")) {
+        category = FindingCategory.STYLE;
+      } else if (rawCategory.includes("MAINTAIN")) {
+        category = FindingCategory.MAINTAINABILITY;
+      }
+
+      const message =
+        f.message ||
+        f.description ||
+        f.comment ||
+        "Potential defect detected in this change.";
+
+      const title =
+        f.title?.slice(0, 200) ||
+        f.name?.slice(0, 200) ||
+        message.slice(0, 100);
+
+      const rawLine =
+        typeof f.line === "number"
+          ? f.line
+          : typeof f.lineNumber === "number"
+            ? f.lineNumber
+            : null;
 
       const side =
         f.side?.toUpperCase() === "LEFT" ? DiffSide.LEFT : DiffSide.RIGHT;
 
-      return {
-        filePath: f.filePath,
-        line: typeof f.line === "number" ? f.line : null,
+      validatedFindings.push({
+        filePath,
+        line: rawLine,
         startLine: typeof f.startLine === "number" ? f.startLine : null,
         side,
         severity,
         category,
-        title: f.title?.slice(0, 200) || "Code Issue Detected",
-        message: f.message || "Potential defect detected in this change.",
-        suggestion: f.suggestion || null,
-        confidence: typeof f.confidence === "number" ? f.confidence : 0.8,
-      };
-    });
+        title,
+        message,
+        suggestion: f.suggestion || f.recommendation || f.fix || null,
+        confidence: typeof f.confidence === "number" ? f.confidence : 0.85,
+      });
+    }
 
     return {
-      summary: parsed.summary,
+      summary: summary || `Analyzed pull request diff: ${validatedFindings.length} findings identified.`,
       findings: validatedFindings,
     };
   } catch (error) {
