@@ -40,6 +40,26 @@ export default function RootLayout({
           colorInput: "#18181b",
           colorInputForeground: "#f4f4f5",
         },
+        elements: {
+          card: "border border-zinc-800 bg-zinc-950 text-zinc-100 shadow-2xl",
+          headerTitle: "text-zinc-100 font-bold",
+          headerSubtitle: "text-zinc-400 text-xs",
+          socialButtonsBlockButton:
+            "border border-zinc-800 bg-zinc-900 text-zinc-100 hover:bg-zinc-800",
+          socialButtonsBlockButtonText: "text-zinc-100 font-medium text-xs",
+          socialButtonsProviderIcon: "brightness-200",
+          dividerLine: "bg-zinc-800",
+          dividerText: "text-zinc-400 text-xs",
+          formFieldLabel: "text-zinc-300 text-xs",
+          formFieldInput:
+            "border border-zinc-800 bg-zinc-900 text-zinc-100 focus:border-zinc-500 text-xs",
+          formButtonPrimary:
+            "bg-zinc-100 text-zinc-950 hover:bg-zinc-200 text-xs font-semibold",
+          footerActionText: "text-zinc-400 text-xs",
+          footerActionLink: "text-zinc-200 hover:text-zinc-100 text-xs font-medium",
+          identityPreviewText: "text-zinc-100 text-xs",
+          identityPreviewEditButton: "text-zinc-400 hover:text-zinc-100",
+        },
       }}
     >
       <html
