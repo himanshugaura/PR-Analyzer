@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
 import { apiClient } from "../lib/api-client";
 import type { PullRequest, PullRequestDiffData, PullRequestState } from "../types";
 
@@ -23,6 +24,8 @@ export function useRepositoryPullRequests(
   repositoryId: string,
   options: ListPullRequestsOptions = {},
 ) {
+  const { isSignedIn } = useAuth();
+
   return useQuery({
     queryKey: ["pull-requests", repositoryId, options],
     queryFn: () =>
@@ -34,22 +37,26 @@ export function useRepositoryPullRequests(
           search: options.search,
         },
       }),
-    enabled: Boolean(repositoryId),
+    enabled: Boolean(isSignedIn && repositoryId),
   });
 }
 
 export function usePullRequest(id: string) {
+  const { isSignedIn } = useAuth();
+
   return useQuery({
     queryKey: ["pull-request", id],
     queryFn: () => apiClient<PullRequest>(`/pull-requests/${id}`),
-    enabled: Boolean(id),
+    enabled: Boolean(isSignedIn && id),
   });
 }
 
 export function usePullRequestDiff(id: string) {
+  const { isSignedIn } = useAuth();
+
   return useQuery({
     queryKey: ["pull-request-diff", id],
     queryFn: () => apiClient<PullRequestDiffData>(`/pull-requests/${id}/diff`),
-    enabled: Boolean(id),
+    enabled: Boolean(isSignedIn && id),
   });
 }

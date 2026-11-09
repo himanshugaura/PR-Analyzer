@@ -1,22 +1,28 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/nextjs";
 import { apiClient } from "../lib/api-client";
 import type { GitHubInstallation, RepositorySettings, Severity } from "../types";
 
 export function useInstallations(search?: string) {
+  const { isSignedIn } = useAuth();
+
   return useQuery({
     queryKey: ["installations", { search }],
     queryFn: () =>
       apiClient<GitHubInstallation[]>("/installations", {
         params: search ? { search } : undefined,
       }),
+    enabled: Boolean(isSignedIn),
   });
 }
 
 export function useInstallation(id: string) {
+  const { isSignedIn } = useAuth();
+
   return useQuery({
     queryKey: ["installation", id],
     queryFn: () => apiClient<GitHubInstallation>(`/installations/${id}`),
-    enabled: Boolean(id),
+    enabled: Boolean(isSignedIn && id),
   });
 }
 
