@@ -23,6 +23,9 @@ interface UserProfile {
  * Bug 2: Safe check against division by zero.
  */
 export function calculateAveragePrice(totalAmount: number, quantity: number): number {
+  if (quantity === 0) {
+    return 0;
+  }
   if (quantity <= 0 || !Number.isFinite(quantity)) {
     return 0;
   }
