@@ -1,21 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Electrolize&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import "tailwindcss";
 
 :root {
   --background: #0a0a0a;
   --foreground: #f4f4f5;
+  --font-electrolize: 'Electrolize', sans-serif;
+  --font-ubuntu-mono: 'Ubuntu Mono', monospace;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-ubuntu-mono), 'Ubuntu Mono', monospace;
+  --font-mono: var(--font-ubuntu-mono), 'Ubuntu Mono', monospace;
+  --font-heading: var(--font-electrolize), 'Electrolize', sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-ubuntu-mono), 'Ubuntu Mono', monospace;
+}
+
+h1, h2, h3, h4, h5, h6, .font-heading,
+h1 *, h2 *, h3 *, h4 *, h5 *, h6 * {
+  font-family: var(--font-electrolize), 'Electrolize', sans-serif;
+  letter-spacing: 0.025em;
+}
+
+p, li, blockquote, .font-desc {
+  font-family: var(--font-ubuntu-mono), 'Ubuntu Mono', monospace;
 }
 
 /* Subtle grid background texture */

@@ -1,69 +1,80 @@
-import { Shield, Clock } from "lucide-react";
-import { Badge } from "../ui/badge";
-import { formatRelativeTime } from "../../lib/utils";
+import { TrendingUp } from "lucide-react";
 import type { Review, ReviewMetrics } from "../../types";
+
+const SEVERITY_CONFIG = [
+  { key: "criticalCount", label: "Critical", color: "text-[#F87171]", bg: "bg-[#F87171]/10" },
+  { key: "highCount", label: "High", color: "text-orange-400", bg: "bg-orange-400/10" },
+  { key: "mediumCount", label: "Medium", color: "text-[#FBBF24]", bg: "bg-[#FBBF24]/10" },
+  { key: "lowCount", label: "Low", color: "text-blue-400", bg: "bg-blue-400/10" },
+  { key: "infoCount", label: "Info", color: "text-[#858593]", bg: "bg-[#858593]/10" },
+] as const;
+
+function computeQualityScore(metrics?: ReviewMetrics): number {
+  if (!metrics) return 100;
+  const score =
+    100 -
+    (metrics.criticalCount * 20 +
+      metrics.highCount * 10 +
+      metrics.mediumCount * 5 +
+      metrics.lowCount * 2);
+  return Math.max(0, Math.min(100, score));
+}
+
+function qualityColor(score: number): string {
+  if (score >= 80) return "text-[#34D399]";
+  if (score >= 60) return "text-[#FBBF24]";
+  return "text-[#F87171]";
+}
 
 export function ReviewMetricsBar({ review, metrics }: { review?: Review; metrics?: ReviewMetrics }) {
   if (!review) {
     return (
-      <div className="rounded-xl border border-dashed border-white/8 p-6 text-center text-xs text-zinc-600 mb-6">
-        No review has been run yet. Click &quot;Trigger Review&quot; to start analysis.
+      <div className="rounded-[8px] border border-dashed border-[#303039] p-6 text-center text-xs text-[#858593] mb-6">
+        No review has been run yet. Run an analysis to see metrics.
       </div>
     );
   }
 
   const isCompleted = review.status === "COMPLETED";
-  const isFailed = review.status === "FAILED";
-  const isRunning = review.status === "RUNNING";
-
-  const severityCounts = [
-    { label: "Critical", value: metrics?.criticalCount ?? 0, color: "text-red-400" },
-    { label: "High", value: metrics?.highCount ?? 0, color: "text-orange-400" },
-    { label: "Medium", value: metrics?.mediumCount ?? 0, color: "text-amber-400" },
-    { label: "Low", value: metrics?.lowCount ?? 0, color: "text-zinc-400" },
-    { label: "Info", value: metrics?.infoCount ?? 0, color: "text-zinc-600" },
-  ];
+  const qualityScore = computeQualityScore(metrics);
+  const qColor = qualityColor(qualityScore);
 
   return (
-    <div className="rounded-xl border border-white/8 bg-white/[0.03] backdrop-blur-sm p-4 mb-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
-            <Shield className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-zinc-200">AI Review Report</span>
-              <Badge
-                variant={isCompleted ? "default" : isFailed ? "critical" : "outline"}
-              >
-                {review.status}
-              </Badge>
+    <div className="rounded-[8px] border border-[#303039] bg-[#1E1E26] p-4 mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {/* Quality score */}
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center">
+            <div className="flex items-baseline gap-1">
+              <TrendingUp className="h-4 w-4 text-[#858593] mb-1" />
+              <span className={`text-[42px] font-bold font-mono leading-none ${qColor}`}>
+                {isCompleted ? qualityScore : "—"}
+              </span>
+              {isCompleted && <span className="text-[14px] text-[#858593] font-mono">/100</span>}
             </div>
+            <span className="text-[10px] text-[#858593] font-mono uppercase tracking-wider mt-1">Quality</span>
           </div>
         </div>
 
-        <div className="text-[11px] text-zinc-600 flex items-center gap-1 font-mono">
-          <Clock className="h-3 w-3" />
-          <span>
-            {review.completedAt
-              ? `Completed ${formatRelativeTime(review.completedAt)}`
-              : isRunning
-              ? "Analysis running..."
-              : `Started ${formatRelativeTime(review.startedAt)}`}
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-5 gap-2 pt-3">
-        {severityCounts.map((item) => (
-          <div key={item.label} className="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-center">
-            <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-600 mb-1">{item.label}</p>
-            <p className={`text-2xl font-bold font-mono ${item.value > 0 ? item.color : "text-zinc-700"}`}>
-              {item.value}
-            </p>
+        {/* Severity summary */}
+        {isCompleted && metrics && (
+          <div className="flex items-center gap-2">
+            {SEVERITY_CONFIG.map(({ key, label, color, bg }) => {
+              const count = metrics[key] ?? 0;
+              return (
+                <div
+                  key={key}
+                  className={`flex flex-col items-center rounded-[6px] border border-[#303039] ${bg} px-3 py-2 min-w-[52px]`}
+                >
+                  <span className={`text-[18px] font-bold font-mono leading-none ${count > 0 ? color : "text-[#303039]"}`}>
+                    {count}
+                  </span>
+                  <span className="text-[9px] text-[#858593] font-mono uppercase tracking-wider mt-1">{label}</span>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

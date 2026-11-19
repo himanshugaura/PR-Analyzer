@@ -7,6 +7,7 @@ import {
   validateQuery,
 } from "../../core/middlewares/validateRequest.middleware.js";
 import {
+  autoFixFinding,
   getReview,
   postReviewComments,
   triggerReview,
@@ -55,6 +56,13 @@ router.patch(
   validateParams(findingIdParamSchema),
   validateBody(updateFindingStatusSchema),
   updateFindingStatus,
+);
+
+// Auto-fix a finding using Gemini AI and push commit to GitHub PR branch
+router.post(
+  "/findings/:findingId/auto-fix",
+  validateParams(findingIdParamSchema),
+  autoFixFinding,
 );
 
 export default router;

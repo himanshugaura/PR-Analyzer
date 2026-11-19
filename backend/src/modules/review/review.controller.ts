@@ -87,6 +87,23 @@ export const updateFindingStatus = async (
 };
 
 /**
+ * Controller to automatically fix a finding using Gemini AI and push commit to GitHub PR.
+ */
+export const autoFixFinding = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  if (!req.user) {
+    throw new ApiError(401, "Authentication required");
+  }
+
+  const findingId = req.params.findingId as string;
+  const result = await reviewService.autoFixFinding(findingId, req.user.id);
+
+  sendResponse(res, 200, result.message, result);
+};
+
+/**
  * Controller to manually post review comments to GitHub PR.
  */
 export const postReviewComments = async (

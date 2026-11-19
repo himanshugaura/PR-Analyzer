@@ -16,7 +16,7 @@ export function DiffViewer({
 
   if (files.length === 0 && !rawDiff) {
     return (
-      <div className="rounded-xl border border-dashed border-white/8 p-12 text-center text-xs text-zinc-600">
+      <div className="rounded-[8px] border border-dashed border-[#303039] p-12 text-center text-xs text-[#858593] bg-[#1E1E26]/40">
         No code changes found in this pull request diff.
       </div>
     );
@@ -26,20 +26,20 @@ export function DiffViewer({
   const totalDeletions = files.reduce((a, f) => a + (f.deletions || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Changed files summary & view mode toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500 pb-3 border-b border-white/5">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#858593] pb-3 border-b border-[#303039]">
         <div className="flex items-center gap-3">
-          <span className="font-semibold text-zinc-200 font-mono">
+          <span className="font-semibold text-[#EDEDF2] font-mono text-xs">
             {files.length > 0 ? `${files.length} changed files` : "Raw Diff"}
           </span>
           {files.length > 0 && (
-            <div className="flex items-center gap-2.5 font-mono text-[11px]">
-              <span className="flex items-center gap-0.5 text-emerald-400 font-medium">
+            <div className="flex items-center gap-2 font-mono text-[11px]">
+              <span className="flex items-center gap-0.5 text-[#34D399] font-medium bg-[#34D399]/10 px-1.5 py-0.5 rounded-[4px]">
                 <Plus className="h-3 w-3" />
                 {totalAdditions}
               </span>
-              <span className="flex items-center gap-0.5 text-rose-400 font-medium">
+              <span className="flex items-center gap-0.5 text-[#F87171] font-medium bg-[#F87171]/10 px-1.5 py-0.5 rounded-[4px]">
                 <Minus className="h-3 w-3" />
                 {totalDeletions}
               </span>
@@ -48,14 +48,14 @@ export function DiffViewer({
         </div>
 
         {rawDiff && files.length > 0 && (
-          <div className="flex items-center gap-1 rounded-md bg-white/5 p-0.5 border border-white/10">
+          <div className="flex items-center gap-1 rounded-[6px] bg-[#1E1E26] p-0.5 border border-[#303039]">
             <button
               type="button"
               onClick={() => setViewMode("files")}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-[4px] text-[11px] font-medium transition-colors cursor-pointer ${
                 viewMode === "files"
-                  ? "bg-white/10 text-zinc-100"
-                  : "text-zinc-500 hover:text-zinc-300"
+                  ? "bg-[#292932] text-[#EDEDF2]"
+                  : "text-[#858593] hover:text-[#EDEDF2]"
               }`}
             >
               <Eye className="h-3 w-3" />
@@ -64,10 +64,10 @@ export function DiffViewer({
             <button
               type="button"
               onClick={() => setViewMode("raw")}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-medium transition-colors cursor-pointer ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-[4px] text-[11px] font-medium transition-colors cursor-pointer ${
                 viewMode === "raw"
-                  ? "bg-white/10 text-zinc-100"
-                  : "text-zinc-500 hover:text-zinc-300"
+                  ? "bg-[#292932] text-[#EDEDF2]"
+                  : "text-[#858593] hover:text-[#EDEDF2]"
               }`}
             >
               <Code2 className="h-3 w-3" />
@@ -79,11 +79,12 @@ export function DiffViewer({
 
       {/* Raw Unified Diff View */}
       {(viewMode === "raw" || files.length === 0) && rawDiff && (
-        <div className="rounded-lg border border-white/8 bg-black/40 overflow-hidden font-mono text-xs">
-          <div className="px-4 py-2 bg-white/5 border-b border-white/5 text-[11px] text-zinc-500 font-mono">
-            Unified Git Diff
+        <div className="rounded-[8px] border border-[#303039] bg-[#0C0C10] overflow-hidden font-mono text-xs">
+          <div className="px-4 py-2 bg-[#17171D] border-b border-[#303039] text-[11px] text-[#858593] font-mono flex items-center justify-between">
+            <span>Unified Git Diff</span>
+            <span className="text-[10px] text-[#858593]">Raw Stream</span>
           </div>
-          <pre className="p-4 overflow-x-auto text-[11px] leading-relaxed text-zinc-300">
+          <pre className="p-4 overflow-x-auto text-[12px] leading-relaxed text-[#EDEDF2] font-mono select-text">
             {rawDiff}
           </pre>
         </div>
@@ -94,13 +95,13 @@ export function DiffViewer({
         files.map((file) => (
           <div
             key={file.filename}
-            className="rounded-lg border border-white/8 bg-white/[0.02] overflow-hidden"
+            className="rounded-[8px] border border-[#303039] bg-[#0C0C10] overflow-hidden"
           >
             {/* File Header */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 bg-white/[0.03] border-b border-white/5 text-xs font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2 bg-[#17171D] border-b border-[#303039] text-xs font-mono">
               <div className="flex items-center gap-2 min-w-0">
-                <FileText className="h-3.5 w-3.5 text-zinc-500 shrink-0" />
-                <span className="font-semibold text-zinc-200 truncate">
+                <FileText className="h-3.5 w-3.5 text-[#858593] shrink-0" />
+                <span className="font-semibold text-[#EDEDF2] truncate text-[12px]">
                   {file.filename}
                 </span>
                 <Badge variant="outline" className="text-[10px] uppercase">
@@ -109,10 +110,10 @@ export function DiffViewer({
               </div>
 
               <div className="flex items-center gap-3 text-[11px]">
-                <span className="text-emerald-400 font-medium">
+                <span className="text-[#34D399] font-medium font-mono">
                   +{file.additions}
                 </span>
-                <span className="text-rose-400 font-medium">
+                <span className="text-[#F87171] font-medium font-mono">
                   -{file.deletions}
                 </span>
                 {file.blob_url && (
@@ -120,7 +121,7 @@ export function DiffViewer({
                     href={file.blob_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-zinc-500 hover:text-amber-400 transition-colors ml-1"
+                    className="flex items-center gap-1 text-[#858593] hover:text-[#8B7CF6] transition-colors ml-1"
                     title="View file on GitHub"
                   >
                     <ExternalLink className="h-3 w-3" />
@@ -131,7 +132,7 @@ export function DiffViewer({
 
             {/* Patch Lines */}
             {file.patch ? (
-              <div className="p-2 font-mono text-[11px] leading-relaxed overflow-x-auto bg-black/30 text-zinc-200 select-text">
+              <div className="p-1 font-mono text-[12px] leading-relaxed overflow-x-auto bg-[#0C0C10] text-[#EDEDF2] select-text">
                 {file.patch.split("\n").map((line, idx) => {
                   const isAdd = line.startsWith("+");
                   const isDel = line.startsWith("-");
@@ -140,32 +141,35 @@ export function DiffViewer({
                   return (
                     <div
                       key={idx}
-                      className={`px-3 py-0.5 whitespace-pre font-mono ${
+                      className={`px-3 py-0.5 whitespace-pre font-mono flex items-start ${
                         isAdd
-                          ? "bg-emerald-950/35 text-emerald-300 font-normal border-l-2 border-emerald-500"
+                          ? "bg-[#34D399]/8 text-[#34D399] border-l-2 border-[#34D399]"
                           : isDel
-                          ? "bg-rose-950/35 text-rose-300 font-normal border-l-2 border-rose-500"
+                          ? "bg-[#F87171]/8 text-[#F87171] border-l-2 border-[#F87171]"
                           : isHeader
-                          ? "bg-amber-950/20 text-amber-400/80 font-semibold py-1 my-0.5 border-l-2 border-amber-500/30"
-                          : "text-zinc-300 hover:bg-white/[0.02]"
+                          ? "bg-[#8B7CF6]/8 text-[#8B7CF6] font-medium py-1 my-0.5 border-l-2 border-[#8B7CF6]/30 text-[11px]"
+                          : "text-[#858593] hover:bg-[#1E1E26]/40"
                       }`}
                     >
-                      {line}
+                      <span className="inline-block w-8 shrink-0 text-right pr-3 select-none text-[10px] text-[#303039] font-mono">
+                        {idx + 1}
+                      </span>
+                      <span className="flex-1">{line}</span>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="p-4 text-xs text-zinc-500 italic flex items-center justify-between">
-                <span>Binary file or diff preview unavailable for this file format.</span>
+              <div className="p-4 text-xs text-[#858593] italic flex items-center justify-between">
+                <span>Binary file or diff preview unavailable for this format.</span>
                 {file.blob_url && (
                   <a
                     href={file.blob_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-zinc-400 hover:text-amber-400 transition-colors not-italic"
+                    className="flex items-center gap-1 text-[#8B7CF6] hover:underline not-italic"
                   >
-                    View full file on GitHub <ExternalLink className="h-3 w-3 ml-0.5" />
+                    View on GitHub <ExternalLink className="h-3 w-3 ml-0.5" />
                   </a>
                 )}
               </div>

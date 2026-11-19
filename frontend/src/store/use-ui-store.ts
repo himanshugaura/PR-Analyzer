@@ -2,6 +2,11 @@ import { create } from "zustand";
 import type { FindingCategory, FindingStatus, Severity } from "../types";
 
 interface UiState {
+  // Sidebar state
+  isSidebarCollapsed: boolean;
+  toggleSidebar: () => void;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+
   // Modal states
   isLinkModalOpen: boolean;
   setLinkModalOpen: (open: boolean) => void;
@@ -27,6 +32,10 @@ interface UiState {
 }
 
 export const useUiStore = create<UiState>((set) => ({
+  isSidebarCollapsed: false,
+  toggleSidebar: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
+  setSidebarCollapsed: (collapsed) => set({ isSidebarCollapsed: collapsed }),
+
   isLinkModalOpen: false,
   setLinkModalOpen: (open) => set({ isLinkModalOpen: open }),
 

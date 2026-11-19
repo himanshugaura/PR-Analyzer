@@ -3,21 +3,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase transition-colors font-mono",
+  "inline-flex items-center gap-1 rounded-[4px] px-2 py-0.5 text-[11px] font-medium tracking-wide uppercase transition-colors font-mono",
   {
     variants: {
       variant: {
-        default: "bg-amber-500/20 text-amber-400 border border-amber-500/30",
-        outline: "text-zinc-400 border border-white/10 bg-white/5",
-        secondary: "bg-white/5 text-zinc-300 border border-white/10",
-        critical: "bg-red-500/15 text-red-400 border border-red-500/30",
-        high: "bg-orange-500/15 text-orange-400 border border-orange-500/30",
-        medium: "bg-amber-500/15 text-amber-400 border border-amber-500/30",
-        low: "bg-zinc-700/40 text-zinc-400 border border-zinc-700/50",
-        info: "bg-transparent text-zinc-500 border border-white/10",
-        open: "bg-amber-500/20 text-amber-400 border border-amber-500/30",
-        closed: "bg-zinc-800 text-zinc-500 border border-zinc-700",
-        merged: "bg-zinc-700/30 text-zinc-300 border border-zinc-600/50",
+        default: "bg-[#8B7CF6]/15 text-[#8B7CF6] border border-[#8B7CF6]/30",
+        outline: "text-[#858593] border border-[#303039] bg-[#1E1E26]",
+        secondary: "bg-[#292932] text-[#EDEDF2] border border-[#303039]",
+        success: "bg-[#34D399]/15 text-[#34D399] border border-[#34D399]/30",
+        warning: "bg-[#FBBF24]/15 text-[#FBBF24] border border-[#FBBF24]/30",
+        critical: "bg-[#F87171]/15 text-[#F87171] border border-[#F87171]/30",
+        high: "bg-[#FB923C]/15 text-[#FB923C] border border-[#FB923C]/30",
+        medium: "bg-[#FBBF24]/15 text-[#FBBF24] border border-[#FBBF24]/30",
+        low: "bg-[#60A5FA]/15 text-[#60A5FA] border border-[#60A5FA]/30",
+        info: "bg-transparent text-[#858593] border border-[#303039]",
+        open: "bg-[#8B7CF6]/15 text-[#8B7CF6] border border-[#8B7CF6]/30",
+        closed: "bg-[#292932] text-[#858593] border border-[#303039]",
+        merged: "bg-[#34D399]/15 text-[#34D399] border border-[#34D399]/30",
       },
     },
     defaultVariants: { variant: "default" },

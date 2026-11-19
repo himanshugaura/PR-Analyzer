@@ -6,18 +6,18 @@ import type { Repository } from "../../types";
 
 export function RepoHeader({ repository }: { repository: Repository }) {
   return (
-    <div className="space-y-5 mb-8">
+    <div className="space-y-4 mb-6">
       <Link
-        href="/"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-600 hover:text-amber-400 transition-colors"
+        href="/repositories"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-[#858593] hover:text-[#8B7CF6] transition-colors"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        <span>Back to Dashboard</span>
+        <span>← Back to Repositories</span>
       </Link>
 
-      <div className="pb-5 border-b border-white/8">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs text-zinc-600 font-mono">
+      <div className="pb-4 border-b border-[#303039]">
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="text-xs text-[#858593] font-mono">
             {repository.ownerLogin} /
           </span>
           <Badge variant="outline" className="text-[10px]">
@@ -33,13 +33,13 @@ export function RepoHeader({ repository }: { repository: Repository }) {
           </Badge>
         </div>
 
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-100 font-mono">
+        <h1 className="text-2xl font-bold tracking-tight text-[#EDEDF2]">
           {repository.name}
         </h1>
 
-        <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-zinc-600">
+        <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-[#858593]">
           {repository.defaultBranch && (
-            <span className="flex items-center gap-1 font-mono">
+            <span className="flex items-center gap-1 font-mono text-[#8B7CF6]">
               <GitBranch className="h-3 w-3" />
               {repository.defaultBranch}
             </span>

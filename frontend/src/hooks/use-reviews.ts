@@ -94,3 +94,27 @@ export function usePostReviewComments() {
     },
   });
 }
+
+export interface AutoFixResponse {
+  success: boolean;
+  finding: Finding;
+  commitSha?: string;
+  commitUrl?: string;
+  fixedCode?: string;
+  message: string;
+}
+
+export function useAutoFixFinding() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (findingId: string) =>
+      apiClient<AutoFixResponse>(`/reviews/findings/${findingId}/auto-fix`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["review"] });
+      queryClient.invalidateQueries({ queryKey: ["pull-request"] });
+    },
+  });
+}

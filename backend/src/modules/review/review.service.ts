@@ -510,6 +510,159 @@ export const updateFindingStatus = async (
 };
 
 /**
+ * Automatically remediates a finding using Gemini AI and commits the fix
+ * directly to the GitHub Pull Request branch via Octokit.
+ */
+export const autoFixFinding = async (
+  findingId: string,
+  userId: string,
+) => {
+  const finding = await prisma.finding.findFirst({
+    where: {
+      id: findingId,
+      review: {
+        pullRequest: {
+          repository: {
+            installation: {
+              userId,
+            },
+          },
+        },
+      },
+    },
+    include: {
+      review: {
+        include: {
+          pullRequest: {
+            include: {
+              repository: {
+                include: {
+                  installation: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!finding) {
+    throw new ApiError(404, "Finding not found or not accessible by this user");
+  }
+
+  const pr = finding.review.pullRequest;
+  const repo = pr.repository;
+  const [owner, repoName] = repo.fullName.split("/");
+  const headBranch = pr.headBranch;
+  const installationId = repo.installation.installationId;
+
+  const octokit = createInstallationOctokit(installationId);
+
+  // 1. Fetch current file content from head branch
+  let fileData: any;
+  let currentFileContent = "";
+
+  try {
+    const fileRes = await octokit.rest.repos.getContent({
+      owner,
+      repo: repoName,
+      path: finding.filePath,
+      ref: headBranch,
+    });
+    fileData = fileRes.data;
+    if ("content" in fileData && typeof fileData.content === "string") {
+      currentFileContent = Buffer.from(fileData.content, "base64").toString("utf-8");
+    }
+  } catch (err: any) {
+    logger.error(`Failed to fetch file content for auto-fix from GitHub: ${err.message}`);
+    throw new ApiError(500, `Could not retrieve file ${finding.filePath} from branch ${headBranch}`);
+  }
+
+  // 2. Call Gemini to fix the file
+  const ai = getGeminiClient();
+  const systemInstruction = `You are an expert automated code remediation system.
+Your job is to apply a code fix for a specific defect detected in a file.
+Rules:
+1. Fix the specified issue cleanly and correctly following language and security best practices.
+2. Preserve ALL other lines, logic, imports, comments, and structure of the file unchanged.
+3. Output ONLY the raw replacement file content. Do NOT include markdown formatting, backticks, or preamble.`;
+
+  const userPrompt = `File Path: ${finding.filePath}
+Line Number: ${finding.line ?? "N/A"}
+Issue Title: ${finding.title}
+Issue Description: ${finding.message}
+Suggested Fix: ${finding.suggestion ?? "Fix the bug cleanly"}
+
+Original File Content:
+${currentFileContent}`;
+
+  let fixedContent = "";
+  try {
+    const aiResponse = await ai.models.generateContent({
+      model: env.GEMINI_MODEL,
+      contents: [userPrompt],
+      config: {
+        systemInstruction,
+      },
+    });
+
+    fixedContent = aiResponse.text?.trim() || "";
+    // Clean any markdown code blocks if returned
+    if (fixedContent.startsWith("```")) {
+      fixedContent = fixedContent.replace(/^```[a-zA-Z]*\r?\n/, "").replace(/\r?\n```$/, "");
+    }
+  } catch (err: any) {
+    logger.error(`Gemini failed to generate code fix: ${err.message}`);
+    throw new ApiError(500, "Gemini failed to generate code fix for this issue");
+  }
+
+  if (!fixedContent) {
+    throw new ApiError(500, "AI returned empty content for code fix");
+  }
+
+  // 3. Commit to GitHub PR branch
+  let commitSha: string | undefined;
+  let commitUrl: string | undefined;
+  const commitMessage = `fix(${finding.filePath}): resolve ${finding.title} [AI Fix]`;
+
+  try {
+    const commitRes = await octokit.rest.repos.createOrUpdateFileContents({
+      owner,
+      repo: repoName,
+      path: finding.filePath,
+      message: commitMessage,
+      content: Buffer.from(fixedContent, "utf-8").toString("base64"),
+      sha: fileData.sha,
+      branch: headBranch,
+    });
+
+    commitSha = commitRes.data.commit.sha;
+    commitUrl = commitRes.data.commit.html_url;
+    logger.info(`Auto-fix committed successfully for finding ${finding.id} (SHA: ${commitSha})`);
+  } catch (gitErr: any) {
+    logger.warn(`Failed to push commit directly via GitHub App: ${gitErr.message}`);
+  }
+
+  // 4. Update finding status in database
+  const updatedFinding = await prisma.finding.update({
+    where: { id: findingId },
+    data: { status: "RESOLVED" },
+  });
+
+  return {
+    success: true,
+    finding: updatedFinding,
+    commitSha,
+    commitUrl,
+    fixedCode: fixedContent,
+    message: commitSha
+      ? `AI fix successfully pushed as commit ${commitSha.slice(0, 7)} to branch ${headBranch}!`
+      : "AI fix generated and issue marked resolved. (Grant 'Contents: Write' in GitHub App settings for automatic git push).",
+  };
+};
+
+/**
  * Formats a clean markdown body for an inline GitHub review comment.
  */
 const formatFindingComment = (finding: {

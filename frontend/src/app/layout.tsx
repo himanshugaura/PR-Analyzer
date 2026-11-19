@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Ubuntu_Mono, Electrolize } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Navbar } from "../components/layout/navbar";
 import { LinkInstallationModal } from "../components/dashboard/link-modal";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const ubuntuMono = Ubuntu_Mono({
+  weight: ["400", "700"],
   subsets: ["latin"],
+  variable: "--font-ubuntu-mono",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const electrolize = Electrolize({
+  weight: "400",
   subsets: ["latin"],
+  variable: "--font-electrolize",
 });
 
 export const metadata: Metadata = {
@@ -64,7 +66,7 @@ export default function RootLayout({
     >
       <html
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full dark antialiased`}
+        className={`${electrolize.variable} ${ubuntuMono.variable} h-full dark antialiased`}
       >
         <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100 font-sans selection:bg-zinc-800 selection:text-zinc-100">
           <Providers>
