@@ -210,6 +210,7 @@ export const runPullRequestReview = async ({
   pullRequestId,
   triggeredById = null,
   forceReReview = false,
+  postToGitHub = false,
 }: ReviewTriggerOptions) => {
   const pr = await prisma.pullRequest.findUnique({
     where: { id: pullRequestId },
@@ -253,6 +254,9 @@ export const runPullRequestReview = async ({
       logger.info(
         `Review for PR #${pr.number} at SHA ${pr.headSha.slice(0, 7)} already completed. Returning cached review.`,
       );
+      if (postToGitHub) {
+        await postReviewToGitHub(existingReview.id, { force: true });
+      }
       return existingReview;
     }
 
@@ -387,11 +391,12 @@ export const runPullRequestReview = async ({
       `AI review completed for PR #${pr.number} (SHA ${pr.headSha.slice(0, 7)}): ${eligibleFindings.length} findings recorded`,
     );
 
-    // 6. Post review comments back to GitHub if autoComment is enabled
-    if (settings?.autoComment !== false) {
-      postReviewToGitHub(review.id).catch((err) => {
+    // 6. Post review comments back to GitHub only if explicitly requested (e.g. postToGitHub: true).
+    // Automatic posting has been removed per user requirement; reviews are posted manually via user action.
+    if (postToGitHub) {
+      postReviewToGitHub(review.id, { force: true }).catch((err) => {
         logger.error(
-          `Background GitHub review comment posting failed for review ${review.id}:`,
+          `Manual GitHub review comment posting failed for review ${review.id}:`,
           { error: err },
         );
       });
@@ -748,6 +753,7 @@ const formatReviewSummary = (
  */
 export const postReviewToGitHub = async (
   reviewId: string,
+  options?: { force?: boolean },
 ): Promise<PostReviewResult> => {
   const review = await prisma.review.findUnique({
     where: { id: reviewId },
@@ -774,7 +780,7 @@ export const postReviewToGitHub = async (
   const { repository } = pullRequest;
   const settings = repository.settings;
 
-  if (settings && !settings.autoComment) {
+  if (!options?.force && settings && !settings.autoComment) {
     logger.info(
       `Skipping GitHub comment posting for PR #${pullRequest.number}: autoComment is disabled in repository settings`,
     );

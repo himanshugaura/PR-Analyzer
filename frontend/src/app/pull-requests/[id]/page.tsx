@@ -30,6 +30,7 @@ import {
 } from "../../../hooks/use-pull-requests";
 import {
   useReview,
+  useTriggerReview,
 } from "../../../hooks/use-reviews";
 import { useUiStore } from "../../../store/use-ui-store";
 import type { Finding } from "../../../types";
@@ -57,6 +58,8 @@ function PullRequestReviewContent({
   const severityFilter = useUiStore((s) => s.severityFilter);
   const categoryFilter = useUiStore((s) => s.categoryFilter);
   const statusFilter = useUiStore((s) => s.statusFilter);
+
+  const triggerReviewMutation = useTriggerReview();
 
   // 1. Fetch Pull Request details
   const {
@@ -165,7 +168,17 @@ function PullRequestReviewContent({
       {activeTab === "overview" && (
         <div className="space-y-6">
           {/* Review Metrics Bar */}
-          <ReviewMetricsBar review={review} metrics={metrics} />
+          <ReviewMetricsBar
+            review={review}
+            metrics={metrics}
+            onRunReview={() =>
+              triggerReviewMutation.mutate({
+                pullRequestId: prId,
+                forceReReview: false,
+              })
+            }
+            isReviewing={triggerReviewMutation.isPending}
+          />
 
           {/* PR Body / Description Card */}
           {pullRequest.body && (
@@ -198,9 +211,11 @@ function PullRequestReviewContent({
 
             {findings.length === 0 ? (
               <div className="rounded-[8px] border border-[#303039] bg-[#1E1E26] p-8 text-center text-xs text-[#858593]">
-                {isCompleted
+                {!review
+                  ? "No review findings to show yet. Click 'Run AI Review' above to analyze this PR."
+                  : isCompleted
                   ? "✓ No issues found. This pull request looks clean!"
-                  : "Automated AI review runs continuously on every commit."}
+                  : "AI review is currently analyzing this pull request..."}
               </div>
             ) : (
               <div className="space-y-3">

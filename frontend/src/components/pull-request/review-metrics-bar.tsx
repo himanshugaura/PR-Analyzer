@@ -1,4 +1,5 @@
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Sparkles, Loader2 } from "lucide-react";
+import { Button } from "../ui/button";
 import type { Review, ReviewMetrics } from "../../types";
 
 const SEVERITY_CONFIG = [
@@ -26,11 +27,45 @@ function qualityColor(score: number): string {
   return "text-[#F87171]";
 }
 
-export function ReviewMetricsBar({ review, metrics }: { review?: Review; metrics?: ReviewMetrics }) {
+export function ReviewMetricsBar({
+  review,
+  metrics,
+  onRunReview,
+  isReviewing,
+}: {
+  review?: Review;
+  metrics?: ReviewMetrics;
+  onRunReview?: () => void;
+  isReviewing?: boolean;
+}) {
   if (!review) {
     return (
-      <div className="rounded-[8px] border border-dashed border-[#303039] p-6 text-center text-xs text-[#858593] mb-6">
-        No review has been run yet. Run an analysis to see metrics.
+      <div className="rounded-[8px] border border-dashed border-[#303039] p-8 text-center text-xs text-[#858593] mb-6 flex flex-col items-center justify-center gap-2 bg-[#1E1E26]/40">
+        <Sparkles className="h-7 w-7 text-[#8B7CF6] mb-1" />
+        <span className="text-sm font-semibold text-[#EDEDF2]">No AI Review Generated Yet</span>
+        <span className="text-xs text-[#858593] max-w-sm">
+          This pull request hasn&apos;t been reviewed yet. Click the button below to generate a complete Gemini AI code analysis.
+        </span>
+        {onRunReview && (
+          <Button
+            size="sm"
+            onClick={onRunReview}
+            disabled={isReviewing}
+            className="mt-3 h-8 px-4 text-xs gap-1.5 bg-[#8B7CF6] hover:bg-[#7C3AED] text-white font-medium cursor-pointer shadow-sm"
+          >
+            {isReviewing ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>Running Review...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Generate AI Review</span>
+              </>
+            )}
+          </Button>
+        )}
       </div>
     );
   }

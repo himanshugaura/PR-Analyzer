@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { GitPullRequest, ArrowRight, User, CheckCircle2, AlertTriangle, Clock } from "lucide-react";
+import { GitPullRequest, ArrowRight, User, CheckCircle2, AlertTriangle, Clock, Sparkles } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { formatRelativeTime } from "../../lib/utils";
+import { useTriggerReview } from "../../hooks/use-reviews";
 import type { PullRequest } from "../../types";
 
 export function PullRequestTable({
@@ -12,6 +13,7 @@ export function PullRequestTable({
 }: {
   pullRequests: PullRequest[];
 }) {
+  const triggerReviewMutation = useTriggerReview();
   if (pullRequests.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-[8px] border border-dashed border-[#303039] py-16 text-center bg-[#1E1E26]/40">
@@ -93,9 +95,33 @@ export function PullRequestTable({
 
                   <td className="py-3 px-4">
                     {!hasReview ? (
-                      <span className="text-[11px] text-[#858593] italic">
-                        Not reviewed
-                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          triggerReviewMutation.mutate({ pullRequestId: pr.id });
+                        }}
+                        disabled={
+                          triggerReviewMutation.isPending &&
+                          triggerReviewMutation.variables?.pullRequestId === pr.id
+                        }
+                        className="h-6 px-2.5 text-[11px] font-mono gap-1.5 border-[#8B7CF6]/40 text-[#8B7CF6] hover:bg-[#8B7CF6]/15 hover:text-[#A78BFA] transition-all cursor-pointer"
+                      >
+                        {triggerReviewMutation.isPending &&
+                        triggerReviewMutation.variables?.pullRequestId === pr.id ? (
+                          <>
+                            <Clock className="h-3 w-3 animate-spin text-[#8B7CF6]" />
+                            <span>Reviewing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3 w-3 text-[#8B7CF6]" />
+                            <span>Run Review</span>
+                          </>
+                        )}
+                      </Button>
                     ) : isCompleted ? (
                       <div className="flex items-center gap-1.5">
                         {totalFindings === 0 ? (

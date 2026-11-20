@@ -28,6 +28,7 @@ export interface ReviewTriggerOptions {
   pullRequestId: string;
   triggeredById?: string | null;
   forceReReview?: boolean;
+  postToGitHub?: boolean;
 }
 
 export interface FindingFilterOptions {

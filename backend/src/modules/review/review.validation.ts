@@ -14,6 +14,7 @@ export const findingIdParamSchema = z.object({
 
 export const triggerReviewBodySchema = z.object({
   forceReReview: z.boolean().optional(),
+  postToGitHub: z.boolean().optional(),
 });
 
 export const listFindingsQuerySchema = z.object({

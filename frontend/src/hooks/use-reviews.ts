@@ -44,17 +44,24 @@ export function useTriggerReview() {
     mutationFn: ({
       pullRequestId,
       forceReReview = false,
+      postToGitHub = false,
     }: {
       pullRequestId: string;
       forceReReview?: boolean;
+      postToGitHub?: boolean;
     }) =>
       apiClient<Review>(`/reviews/pull-request/${pullRequestId}`, {
         method: "POST",
-        body: JSON.stringify({ forceReReview }),
+        body: JSON.stringify({ forceReReview, postToGitHub }),
       }),
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["pull-request", variables.pullRequestId] });
-      queryClient.invalidateQueries({ queryKey: ["review", data?.id] });
+      queryClient.invalidateQueries({ queryKey: ["pull-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["repository"] });
+      queryClient.invalidateQueries({ queryKey: ["review"] });
+      if (data?.id) {
+        queryClient.invalidateQueries({ queryKey: ["review", data.id] });
+      }
     },
   });
 }
@@ -91,6 +98,10 @@ export function usePostReviewComments() {
       ),
     onSuccess: (_, reviewId) => {
       queryClient.invalidateQueries({ queryKey: ["review", reviewId] });
+      queryClient.invalidateQueries({ queryKey: ["review"] });
+      queryClient.invalidateQueries({ queryKey: ["pull-request"] });
+      queryClient.invalidateQueries({ queryKey: ["pull-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["repository"] });
     },
   });
 }

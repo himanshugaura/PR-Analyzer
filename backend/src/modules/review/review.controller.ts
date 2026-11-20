@@ -28,6 +28,7 @@ export const triggerReview = async (
     pullRequestId,
     triggeredById: req.user.id,
     forceReReview: body?.forceReReview ?? false,
+    postToGitHub: body?.postToGitHub ?? false,
   });
 
   sendResponse(
@@ -115,7 +116,7 @@ export const postReviewComments = async (
   }
 
   const reviewId = req.params.id as string;
-  const result = await reviewService.postReviewToGitHub(reviewId);
+  const result = await reviewService.postReviewToGitHub(reviewId, { force: true });
 
   sendResponse(
     res,
