@@ -8,7 +8,7 @@ import {
   ArrowRight,
   ExternalLink,
   Plus,
-  Layers,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth, SignInButton } from "@clerk/nextjs";
 import { Container } from "../components/layout/container";
@@ -27,9 +27,13 @@ export default function DashboardPage() {
   const searchQuery = useUiStore((s) => s.searchQuery);
   const setSearchQuery = useUiStore((s) => s.setSearchQuery);
 
-  const { data: installations = [], isLoading, error } = useInstallations(
-    searchQuery || undefined
-  );
+  const {
+    data: installations = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = useInstallations(searchQuery || undefined);
 
   const allRepos = installations.flatMap((i) => i.repositories || []);
 
@@ -111,6 +115,21 @@ export default function DashboardPage() {
               className="pl-8 h-8 text-xs bg-[#1E1E26] border-[#303039]"
             />
           </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 h-8 text-xs border-[#303039] bg-[#1E1E26] hover:bg-[#292932]"
+            onClick={() => refetch()}
+            disabled={isFetching}
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${
+                isFetching ? "animate-spin text-[#8B7CF6]" : "text-[#858593]"
+              }`}
+            />
+            <span>{isFetching ? "Syncing..." : "Sync Repos"}</span>
+          </Button>
 
           <a
             href={GITHUB_APP_INSTALL_URL}

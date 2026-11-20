@@ -687,6 +687,20 @@ export const getUserInstallations = async (
         logger.debug(`No direct GitHub App installation found for username: ${user.username}`);
       }
     }
+  } else {
+    // If user already has installations, auto-sync accessible repos so new repos selected on GitHub appear immediately
+    const userInstallations = await prisma.gitHubInstallation.findMany({
+      where: { userId },
+      select: { installationId: true },
+    });
+
+    for (const inst of userInstallations) {
+      try {
+        await syncInstallationFromGitHub(inst.installationId, userId);
+      } catch (err: any) {
+        logger.warn(`Background sync failed for installation ${inst.installationId}: ${err.message}`);
+      }
+    }
   }
 
   return prisma.gitHubInstallation.findMany({
