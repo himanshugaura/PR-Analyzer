@@ -47,7 +47,7 @@ export function verifyAdminAccess(token: string): boolean {
  * Bug 4: Safe optional chaining to prevent TypeError.
  */
 export function getBillingZipCode(user: UserProfile): string {
-  return user.profile?.billing?.address?.zipCode ?? "";
+  return user.profile?.billing?.address?.zipCode ?? '';
 }
 
 /**
