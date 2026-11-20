@@ -28,15 +28,20 @@ export function useInstallation(id: string) {
 
 export function useLinkInstallation() {
   const queryClient = useQueryClient();
+  const { getToken } = useAuth();
 
   return useMutation({
-    mutationFn: (installationId: string | number) =>
-      apiClient<GitHubInstallation>("/installations/link", {
+    mutationFn: async (installationId: string | number) => {
+      const token = await getToken();
+      return apiClient<GitHubInstallation>("/installations/link", {
         method: "POST",
         body: JSON.stringify({ installationId }),
-      }),
+        token: token || undefined,
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["installations"] });
+      queryClient.invalidateQueries({ queryKey: ["repositories"] });
     },
   });
 }
